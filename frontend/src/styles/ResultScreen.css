@@ -1,0 +1,279 @@
+/* Result Overlay */
+.result-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.result-card {
+  background-color: white;
+  border-radius: 30px;
+  padding: 40px 30px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.5s ease-out;
+  text-align: center;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Correct Result */
+.correct-result {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f7f4 100%);
+  border: 3px solid #4CAF50;
+}
+
+.achievement-badge {
+  margin-bottom: 20px;
+  animation: bounce 0.6s ease-out;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.medal-icon {
+  font-size: 80px;
+  display: block;
+}
+
+.result-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 15px 0;
+}
+
+.correct-title {
+  color: #4CAF50;
+  text-shadow: 2px 2px 4px rgba(76, 175, 80, 0.2);
+}
+
+.emotion-name {
+  font-size: 18px;
+  color: #666;
+  margin: 10px 0;
+  font-weight: 600;
+}
+
+.score-display {
+  font-size: 16px;
+  color: #4CAF50;
+  margin: 8px 0;
+  font-weight: 700;
+  background-color: rgba(76, 175, 80, 0.1);
+  padding: 8px 16px;
+  border-radius: 10px;
+  display: inline-block;
+}
+
+.achievement-message {
+  background-color: rgba(76, 175, 80, 0.1);
+  border-radius: 15px;
+  padding: 20px;
+  margin: 20px 0;
+  border-left: 4px solid #4CAF50;
+}
+
+.achievement-message p {
+  font-size: 16px;
+  color: #333;
+  margin: 8px 0;
+  font-weight: 500;
+}
+
+/* Incorrect Result */
+.incorrect-result {
+  background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
+  border: 3px solid #ff6b6b;
+}
+
+.sad-badge {
+  margin-bottom: 20px;
+  animation: shake 0.5s ease-out;
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-10px);
+  }
+  75% {
+    transform: translateX(10px);
+  }
+}
+
+.sad-icon {
+  font-size: 80px;
+  display: block;
+}
+
+.incorrect-title {
+  color: #ff6b6b;
+  text-shadow: 2px 2px 4px rgba(255, 107, 107, 0.2);
+}
+
+.explanation-box {
+  background-color: rgba(255, 193, 7, 0.1);
+  border-radius: 15px;
+  padding: 20px;
+  margin: 20px 0;
+  border-left: 4px solid #FFC107;
+  text-align: left;
+}
+
+.explanation-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ff6b6b;
+  margin: 0 0 10px 0;
+}
+
+.explanation-text {
+  font-size: 15px;
+  color: #555;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.encouragement {
+  background-color: rgba(76, 175, 80, 0.1);
+  border-radius: 15px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.encouragement p {
+  font-size: 16px;
+  color: #4CAF50;
+  margin: 0;
+  font-weight: 600;
+}
+
+/* Continue Button */
+.continue-btn {
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  padding: 15px 40px;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 25px;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+}
+
+.continue-btn:hover {
+  background-color: #1976D2;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+}
+
+.success-btn {
+  background-color: #4CAF50;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.success-btn:hover {
+  background-color: #45a049;
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.retry-btn {
+  background-color: #FF9800;
+  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+}
+
+.retry-btn:hover {
+  background-color: #e68900;
+  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .result-card {
+    padding: 30px 20px;
+    max-width: 100%;
+    border-radius: 20px;
+  }
+
+  .medal-icon,
+  .sad-icon {
+    font-size: 60px;
+  }
+
+  .result-title {
+    font-size: 24px;
+  }
+
+  .emotion-name {
+    font-size: 16px;
+  }
+
+  .achievement-message,
+  .explanation-box {
+    padding: 15px;
+    font-size: 14px;
+  }
+
+  .continue-btn {
+    padding: 12px 30px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .result-card {
+    padding: 25px 15px;
+    border-radius: 15px;
+  }
+
+  .medal-icon,
+  .sad-icon {
+    font-size: 50px;
+  }
+
+  .result-title {
+    font-size: 20px;
+  }
+
+  .emotion-name {
+    font-size: 14px;
+  }
+
+  .achievement-message p,
+  .explanation-text {
+    font-size: 13px;
+  }
+
+  .continue-btn {
+    padding: 10px 25px;
+    font-size: 14px;
+  }
+}
