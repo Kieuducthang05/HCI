@@ -956,6 +956,63 @@ body.dark-mode {
   transform: scale(0.98);
 }
 
+.quiz-complete-card {
+  background: white;
+  border-radius: 16px;
+  padding: 28px 20px;
+  margin: 0 16px;
+  text-align: center;
+  box-shadow: var(--child-shadow);
+  animation: slideUp 0.5s ease;
+}
+
+.quiz-complete-emoji {
+  font-size: 56px;
+  margin-bottom: 12px;
+}
+
+.quiz-complete-title {
+  color: var(--child-dark);
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.quiz-complete-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0 0 16px 0;
+}
+
+.quiz-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.quiz-summary-item {
+  background: #f0f4ff;
+  border-radius: 10px;
+  padding: 14px 10px;
+}
+
+.quiz-summary-item span,
+.quiz-summary-item strong {
+  display: block;
+}
+
+.quiz-summary-item span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.quiz-summary-item strong {
+  color: var(--child-primary);
+  font-size: 20px;
+}
+
 /* ====== FRIENDS PAGE ====== */
 
 .child-friends {

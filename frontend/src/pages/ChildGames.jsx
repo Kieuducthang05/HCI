@@ -1,12 +1,17 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
+import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
 import '../styles/Child.css'
+
+const POINTS_PER_CORRECT_ANSWER = 10
 
 export default function ChildGames() {
   const navigate = useNavigate()
+  const { setUserStars } = useOutletContext()
   const [currentGame, setCurrentGame] = useState(null)
   const [score, setScore] = useState(0)
   const [gameIndex, setGameIndex] = useState(0)
+  const [feedback, setFeedback] = useState(null)
 
   // Game 1: Choose Emotion
   const chooseEmotionGames = [
@@ -84,20 +89,26 @@ export default function ChildGames() {
     {
       id: 1,
       description: 'Khi bé chơi với bạn',
+      emotion: 'Vui vẻ',
       correctEmoji: '😊',
-      options: ['😊', '😢', '😡', '😨']
+      options: ['😊', '😢', '😡', '😨'],
+      explanation: 'Khi chơi với bạn, bé thường cảm thấy vui vẻ nên 😊 là phù hợp.'
     },
     {
       id: 2,
       description: 'Khi bé mất đồ chơi yêu thích',
+      emotion: 'Buồn',
       correctEmoji: '😢',
-      options: ['😊', '😢', '😌', '😡']
+      options: ['😊', '😢', '😌', '😡'],
+      explanation: 'Khi mất món đồ mình thích, bé có thể thấy buồn. Biểu cảm 😢 là phù hợp.'
     },
     {
       id: 3,
       description: 'Khi bé không được làm những gì muốn',
+      emotion: 'Tức giận',
       correctEmoji: '😡',
-      options: ['😊', '😡', '😨', '😌']
+      options: ['😊', '😡', '😨', '😌'],
+      explanation: 'Khi không được điều mình muốn, bé có thể tức giận. Biểu cảm 😡 là phù hợp.'
     }
   ]
 
@@ -132,12 +143,68 @@ export default function ChildGames() {
     setCurrentGame(gameId)
     setGameIndex(0)
     setScore(0)
+    setFeedback(null)
   }
 
   const backToMenu = () => {
     setCurrentGame(null)
     setGameIndex(0)
     setScore(0)
+    setFeedback(null)
+  }
+
+  const getFeedbackInfo = () => {
+    const currentGameData = games[currentGame][gameIndex]
+
+    if (currentGame === 'chooseEmotion') {
+      return {
+        emotion: currentGameData.emotion,
+        explanation: currentGameData.explanation
+      }
+    }
+
+    if (currentGame === 'chooseReaction') {
+      return {
+        emotion: 'Phản ứng phù hợp',
+        explanation: currentGameData.explanation
+      }
+    }
+
+    return {
+      emotion: currentGameData.emotion,
+      explanation: currentGameData.explanation
+    }
+  }
+
+  const handleGameAnswer = (isCorrect) => {
+    if (feedback) return
+
+    const scoreAfterAnswer = isCorrect ? score + POINTS_PER_CORRECT_ANSWER : score
+    if (isCorrect) {
+      setScore(scoreAfterAnswer)
+    }
+
+    setFeedback({
+      isCorrect,
+      scoreAfterAnswer,
+      ...getFeedbackInfo()
+    })
+  }
+
+  const handleContinueFeedback = () => {
+    const isLastQuestion = gameIndex >= games[currentGame].length - 1
+    const scoreAfterAnswer = feedback?.scoreAfterAnswer ?? score
+
+    setFeedback(null)
+
+    if (isLastQuestion) {
+      setScore(scoreAfterAnswer)
+      setUserStars((stars) => stars + scoreAfterAnswer)
+      setGameIndex(games[currentGame].length)
+      return
+    }
+
+    setGameIndex((index) => index + 1)
   }
 
   if (!currentGame) {
@@ -169,6 +236,40 @@ export default function ChildGames() {
 
   const currentGameData = games[currentGame][gameIndex]
   const isGameComplete = gameIndex >= games[currentGame].length
+  const feedbackOverlay = feedback && (
+    feedback.isCorrect ? (
+      <CorrectAnswer
+        emotion={feedback.emotion}
+        score={`${feedback.scoreAfterAnswer} ⭐`}
+        title="Đúng rồi!"
+        continueLabel={
+          gameIndex < games[currentGame].length - 1
+            ? 'Tiếp tục →'
+            : 'Xem kết quả →'
+        }
+        messages={[
+          '⭐ Bé đã chọn rất chính xác!',
+          gameIndex < games[currentGame].length - 1
+            ? '🎉 Cùng sang lượt tiếp theo nhé!'
+            : '🎉 Cùng xem kết quả trò chơi nhé!'
+        ]}
+        onContinue={handleContinueFeedback}
+      />
+    ) : (
+      <IncorrectAnswer
+        emotion={feedback.emotion}
+        title="Chưa đúng rồi!"
+        continueLabel={
+          gameIndex < games[currentGame].length - 1
+            ? 'Tiếp tục →'
+            : 'Xem kết quả →'
+        }
+        explanation={feedback.explanation}
+        encouragement="✨ Không sao, bé đã học thêm được một điều mới!"
+        onContinue={handleContinueFeedback}
+      />
+    )
+  )
 
   if (isGameComplete) {
     return (
@@ -215,6 +316,7 @@ export default function ChildGames() {
 
     return (
       <div className="choose-emotion-game">
+        {feedbackOverlay}
         <div className="game-header-new">
           <button className="game-back-btn" onClick={backToMenu}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -229,9 +331,7 @@ export default function ChildGames() {
         </div>
 
         <div className="choose-emotion-content">
-          <h2 className="question-title">
-            Ai đang <span style={{ color: '#305196', fontWeight: 'bold' }}>{currentGameData.emotion}</span> vậy con?
-          </h2>
+          <h2 className="question-title">{renderQuestion()}</h2>
           
           <p className="question-description">{currentGameData.description}</p>
 
@@ -240,19 +340,7 @@ export default function ChildGames() {
               <button
                 key={idx}
                 className="emotion-card"
-                onClick={() => {
-                  if (idx === currentGameData.correctAnswer) {
-                    setScore(score + 10)
-                    alert('✅ Đúng! ' + currentGameData.explanation)
-                  } else {
-                    alert('❌ Sai rồi! ' + currentGameData.explanation)
-                  }
-                  if (gameIndex < games[currentGame].length - 1) {
-                    setGameIndex(gameIndex + 1)
-                  } else {
-                    setGameIndex(gameIndex + 1)
-                  }
-                }}
+                onClick={() => handleGameAnswer(idx === currentGameData.correctAnswer)}
                 style={{ borderColor: imageData.color, backgroundColor: `${imageData.color}15` }}
               >
                 <div className="emotion-image" style={{ fontSize: '60px' }}>
@@ -279,6 +367,7 @@ export default function ChildGames() {
   if (currentGame === 'chooseReaction') {
     return (
       <div className="game-container">
+        {feedbackOverlay}
         <div className="game-header">
           <button className="game-back" onClick={backToMenu}>←</button>
           <div className="game-score">⭐ {score}</div>
@@ -293,19 +382,7 @@ export default function ChildGames() {
             <button
               key={idx}
               className="reaction-btn"
-              onClick={() => {
-                if (currentGameData.correctAnswers.includes(idx)) {
-                  setScore(score + 10)
-                  alert('✅ Đúng! ' + currentGameData.explanation)
-                } else {
-                  alert('❌ Sai rồi! ' + currentGameData.explanation)
-                }
-                if (gameIndex < games[currentGame].length - 1) {
-                  setGameIndex(gameIndex + 1)
-                } else {
-                  setGameIndex(gameIndex + 1)
-                }
-              }}
+              onClick={() => handleGameAnswer(currentGameData.correctAnswers.includes(idx))}
             >
               {reaction}
             </button>
@@ -318,6 +395,7 @@ export default function ChildGames() {
   if (currentGame === 'matchEmotion') {
     return (
       <div className="game-container">
+        {feedbackOverlay}
         <div className="game-header">
           <button className="game-back" onClick={backToMenu}>←</button>
           <div className="game-score">⭐ {score}</div>
@@ -332,19 +410,7 @@ export default function ChildGames() {
             <button
               key={idx}
               className="match-btn"
-              onClick={() => {
-                if (emoji === currentGameData.correctEmoji) {
-                  setScore(score + 10)
-                  alert('✅ Đúng! Đó chính là ' + emoji)
-                } else {
-                  alert('❌ Sai rồi! ' + currentGameData.correctEmoji + ' mới là đúng')
-                }
-                if (gameIndex < games[currentGame].length - 1) {
-                  setGameIndex(gameIndex + 1)
-                } else {
-                  setGameIndex(gameIndex + 1)
-                }
-              }}
+              onClick={() => handleGameAnswer(emoji === currentGameData.correctEmoji)}
             >
               <span className="match-emoji">{emoji}</span>
             </button>

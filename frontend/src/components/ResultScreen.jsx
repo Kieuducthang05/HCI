@@ -1,7 +1,14 @@
 import '../styles/ResultScreen.css'
 
 // Correct Answer Result Screen
-export function CorrectAnswer({ emotion, score, onContinue }) {
+export function CorrectAnswer({
+  emotion,
+  score,
+  onContinue,
+  title = 'Hoàn thành xuất sắc!',
+  continueLabel = 'Tiếp tục →',
+  messages = ['⭐ Bé trả lời rất chính xác!', '🎉 Hãy tiếp tục nỗ lực nhé!']
+}) {
   return (
     <div className="result-overlay">
       <div className="result-card correct-result">
@@ -9,7 +16,7 @@ export function CorrectAnswer({ emotion, score, onContinue }) {
           <span className="medal-icon">🏅</span>
         </div>
         
-        <h2 className="result-title correct-title">Hoàn thành xuất sắc!</h2>
+        <h2 className="result-title correct-title">{title}</h2>
         <p className="emotion-name">Cảm xúc: {emotion}</p>
         
         {score !== undefined && (
@@ -17,12 +24,13 @@ export function CorrectAnswer({ emotion, score, onContinue }) {
         )}
         
         <div className="achievement-message">
-          <p>⭐ Bé trả lời rất chính xác!</p>
-          <p>🎉 Hãy tiếp tục nỗ lực nhé!</p>
+          {messages.map((message) => (
+            <p key={message}>{message}</p>
+          ))}
         </div>
         
         <button className="continue-btn success-btn" onClick={onContinue}>
-          Tiếp tục →
+          {continueLabel}
         </button>
       </div>
     </div>
@@ -30,7 +38,14 @@ export function CorrectAnswer({ emotion, score, onContinue }) {
 }
 
 // Incorrect Answer Result Screen
-export function IncorrectAnswer({ emotion, onContinue, explanation }) {
+export function IncorrectAnswer({
+  emotion,
+  onContinue,
+  explanation,
+  title = 'Hãy thử lại!',
+  continueLabel = 'Thử lại →',
+  encouragement = '✨ Lần tiếp theo bé sẽ làm tốt hơn!'
+}) {
   return (
     <div className="result-overlay">
       <div className="result-card incorrect-result">
@@ -38,7 +53,7 @@ export function IncorrectAnswer({ emotion, onContinue, explanation }) {
           <span className="sad-icon">😢</span>
         </div>
         
-        <h2 className="result-title incorrect-title">Hãy thử lại!</h2>
+        <h2 className="result-title incorrect-title">{title}</h2>
         <p className="emotion-name">Cảm xúc: {emotion}</p>
         
         <div className="explanation-box">
@@ -47,11 +62,11 @@ export function IncorrectAnswer({ emotion, onContinue, explanation }) {
         </div>
         
         <div className="encouragement">
-          <p>✨ Lần tiếp theo bé sẽ làm tốt hơn!</p>
+          <p>{encouragement}</p>
         </div>
         
         <button className="continue-btn retry-btn" onClick={onContinue}>
-          Thử lại →
+          {continueLabel}
         </button>
       </div>
     </div>
