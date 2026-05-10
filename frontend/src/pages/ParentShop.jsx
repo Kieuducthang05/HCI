@@ -1,9 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import ToastNotification from '../components/ToastNotification'
 import '../styles/ParentShop.css'
 
 export default function ParentShop() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [userStars, setUserStars] = useState(1250)
+  const [toast, setToast] = useState(null)
+
+  useEffect(() => {
+    if (!toast) return undefined
+
+    const timer = setTimeout(() => setToast(null), 3200)
+    return () => clearTimeout(timer)
+  }, [toast])
 
   const categories = [
     { id: 'all', label: 'Tất cả' },
@@ -112,14 +121,24 @@ export default function ParentShop() {
   const handleBuyItem = (item) => {
     if (userStars >= item.price) {
       setUserStars(userStars - item.price)
-      alert(`✓ Mua thành công: ${item.name}`)
+      setToast({
+        type: 'success',
+        title: 'Mua thành công',
+        message: `${item.name} đã được thêm vào kho của bé.`
+      })
     } else {
-      alert(`✗ Sao không đủ. Bạn cần thêm ${item.price - userStars} sao`)
+      setToast({
+        type: 'error',
+        title: 'Chưa đủ sao',
+        message: `Bạn cần thêm ${(item.price - userStars).toLocaleString()} sao để mua ${item.name}.`
+      })
     }
   }
 
   return (
     <div className="shop-container">
+      <ToastNotification toast={toast} onClose={() => setToast(null)} />
+
       {/* Header Section */}
       <div className="shop-header">
         <div className="shop-title-section">

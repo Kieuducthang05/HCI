@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import ToastNotification from '../components/ToastNotification'
 import '../styles/ParentSettings.css'
 
 export default function ParentSettings() {
@@ -10,6 +11,7 @@ export default function ParentSettings() {
 
   const [editingInfo, setEditingInfo] = useState(false)
   const [formData, setFormData] = useState(parentInfo)
+  const [toast, setToast] = useState(null)
 
   const [passwordData, setPasswordData] = useState({
     oldPassword: '',
@@ -23,9 +25,21 @@ export default function ParentSettings() {
     { id: 3, name: 'Bé B', avatar: '👦', usageHours: 1250, starCount: 3, emotion: 'Buồn' }
   ])
 
+  useEffect(() => {
+    if (!toast) return undefined
+
+    const timer = setTimeout(() => setToast(null), 3200)
+    return () => clearTimeout(timer)
+  }, [toast])
+
   const handleSaveInfo = () => {
     setParentInfo(formData)
     setEditingInfo(false)
+    setToast({
+      type: 'success',
+      title: 'Cập nhật thành công',
+      message: 'Thông tin cá nhân đã được lưu.'
+    })
   }
 
   const handleInputChange = (e) => {
@@ -40,15 +54,25 @@ export default function ParentSettings() {
 
   const handleUpdatePassword = () => {
     if (passwordData.newPassword === passwordData.confirmPassword) {
-      alert('✓ Cập nhật mật khẩu thành công!')
       setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' })
+      setToast({
+        type: 'success',
+        title: 'Cập nhật thành công',
+        message: 'Mật khẩu mới đã được lưu.'
+      })
     } else {
-      alert('✗ Mật khẩu mới không trùng khớp!')
+      setToast({
+        type: 'error',
+        title: 'Không thể cập nhật',
+        message: 'Mật khẩu mới và phần nhập lại chưa trùng khớp.'
+      })
     }
   }
 
   return (
     <div className="settings-container">
+      <ToastNotification toast={toast} onClose={() => setToast(null)} />
+
       {/* Personal Info Section */}
       <section className="settings-section">
         <div className="section-header">
