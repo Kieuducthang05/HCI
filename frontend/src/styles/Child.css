@@ -59,6 +59,16 @@ body.dark-mode {
   gap: 12px;
 }
 
+.child-top-nav {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 12px;
+}
+
 .topbar-left .back-btn {
   display: flex;
   align-items: center;
@@ -177,7 +187,7 @@ body.dark-mode {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-  background: var(--bg-primary);
+  background: transparent;
 }
 
 .child-bottom-nav {
@@ -191,7 +201,7 @@ body.dark-mode {
 }
 
 .nav-item {
-  flex: 1;
+  flex: 0 1 100px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -200,13 +210,15 @@ body.dark-mode {
   border: none;
   background: none;
   cursor: pointer;
-  color: #999;
+  color: rgba(255, 255, 255, 0.78);
   font-size: 11px;
   transition: all 0.3s ease;
 }
 
 .nav-item.active {
-  color: #667eea;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
 }
 
 .nav-icon {
@@ -1274,7 +1286,7 @@ body.dark-mode {
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  color: white;
+  color: var(--child-dark);
   padding: 0 16px 16px;
 }
 
@@ -1677,6 +1689,16 @@ body.dark-mode {
 @media (max-width: 480px) {
   .child-topbar {
     padding: 10px 12px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .child-top-nav {
+    order: 3;
+    flex: 1 0 100%;
+    padding: 4px 0 0;
+    overflow-x: auto;
+    justify-content: flex-start;
   }
 
   .topbar-left .app-title {
@@ -1934,69 +1956,46 @@ body.dark-mode {
   }
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  .choose-emotion-game {
-    background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-  }
-
-  .game-header-new {
-    background: #2d2d2d;
-    border-bottom-color: #404040;
-  }
-
-  .question-title {
-    color: #ffffff;
-  }
-
-  .question-description {
-    color: #b0b0b0;
-  }
-
-  .emotion-card {
-    background: #3a3a3a;
-  }
-
-  .progress-bar {
-    background: #404040;
-  }
-
-  .progress-text {
-    color: #b0b0b0;
-  }
+/* ====== FIXED LIGHT BACKGROUND ====== */
+.choose-emotion-game {
+  background: #ffffff;
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  .child-main-content,
-  .tab,
-  .lesson-card,
-  .game-container,
-  .friend-detail,
-  .child-avatar-page,
-  .child-inventory {
-    background: #2d2d2d;
-    color: white;
-  }
+.child-container {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
 
-  .emotion-title,
-  .expression-title,
-  .game-title,
-  .friend-name,
-  .detail-name {
-    color: white;
-  }
+.child-main-content {
+  background: transparent;
+}
 
-  .emotion-description,
-  .expression-description,
-  .reaction-btn {
-    color: #b0b0b0;
-  }
+.games-title,
+.friends-header,
+.avatar-header,
+.emotion-tool-header,
+.inventory-header {
+  color: var(--child-dark);
+  text-shadow: none;
+}
 
-  .reaction-btn,
-  .emotion-btn,
-  .match-btn {
-    background: #3a3a3a;
-    border-color: #404040;
-  }
+.emotion-tool-header h2 {
+  color: var(--child-dark);
+}
+
+.emotion-tool-header p {
+  color: var(--text-secondary);
+}
+
+.friends-intro {
+  background: #f0f4ff;
+  color: var(--child-dark);
+}
+
+.close-btn {
+  background: #f1f5f9;
+  color: var(--child-dark);
+}
+
+.close-btn:hover {
+  background: #e2e8f0;
 }

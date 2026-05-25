@@ -36,6 +36,18 @@ export default function ChildLayout() {
             <span>Quay lại</span>
           </button>
         </div>
+        <nav className="child-top-nav">
+          {menuItems.map(item => (
+            <button
+              key={item.id}
+              className={`nav-item ${activeMenu === item.id ? 'active' : ''}`}
+              onClick={() => handleMenuClick(item.id)}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
+            </button>
+          ))}
+        </nav>
         <div className="topbar-right">
           <div className="star-display">
             <span className="star-icon">⭐</span>
@@ -51,19 +63,6 @@ export default function ChildLayout() {
         <Outlet context={{ userStars, setUserStars }} />
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="child-bottom-nav">
-        {menuItems.map(item => (
-          <button
-            key={item.id}
-            className={`nav-item ${activeMenu === item.id ? 'active' : ''}`}
-            onClick={() => handleMenuClick(item.id)}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
-          </button>
-        ))}
-      </nav>
     </div>
   )
 }

@@ -182,6 +182,7 @@ export default function ChildGames() {
     const scoreAfterAnswer = isCorrect ? score + POINTS_PER_CORRECT_ANSWER : score
     if (isCorrect) {
       setScore(scoreAfterAnswer)
+      setUserStars((stars) => stars + POINTS_PER_CORRECT_ANSWER)
     }
 
     setFeedback({
@@ -199,7 +200,6 @@ export default function ChildGames() {
 
     if (isLastQuestion) {
       setScore(scoreAfterAnswer)
-      setUserStars((stars) => stars + scoreAfterAnswer)
       setGameIndex(games[currentGame].length)
       return
     }

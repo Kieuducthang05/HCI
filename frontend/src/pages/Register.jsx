@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/Auth.css'
 
@@ -14,7 +14,8 @@ export default function Register() {
   })
   const [otpData, setOtpData] = useState({
     otp: '',
-    timer: 0
+    timer: 0,
+    code: ''
   })
   const [errors, setErrors] = useState({})
 
@@ -49,6 +50,18 @@ export default function Register() {
       }))
     }
   }
+
+  useEffect(() => {
+    if (step !== 3 || otpData.timer <= 0) return undefined
+
+    const timerId = setTimeout(() => {
+      setOtpData(prev => ({ ...prev, timer: Math.max(prev.timer - 1, 0) }))
+    }, 1000)
+
+    return () => clearTimeout(timerId)
+  }, [otpData.timer, step])
+
+  const createMockOtp = () => String(Math.floor(100000 + Math.random() * 900000))
 
   const validateStep1 = () => {
     const newErrors = {}
@@ -125,7 +138,7 @@ export default function Register() {
     if (Object.keys(newErrors).length === 0) {
       setStep(3)
       setErrors({})
-      setOtpData(prev => ({ ...prev, timer: 60 }))
+      setOtpData(prev => ({ ...prev, otp: '', timer: 60, code: createMockOtp() }))
       // TODO: Gửi OTP đến email/phone
     } else {
       setErrors(newErrors)
@@ -136,6 +149,11 @@ export default function Register() {
     e.preventDefault()
     const newErrors = validateOtp()
     
+    if (Object.keys(newErrors).length === 0 && otpData.otp !== otpData.code) {
+      setErrors({ otp: 'Mã OTP chưa đúng' })
+      return
+    }
+
     if (Object.keys(newErrors).length === 0) {
       // Xác thực OTP thành công
       console.log('Đăng kí:', {
@@ -152,7 +170,8 @@ export default function Register() {
 
   const handleResendOtp = () => {
     // TODO: Gửi lại OTP
-    setOtpData(prev => ({ ...prev, timer: 60 }))
+    setOtpData(prev => ({ ...prev, otp: '', timer: 60, code: createMockOtp() }))
+    setErrors(prev => ({ ...prev, otp: '' }))
   }
 
   // Step 1: Thông tin cơ bản
@@ -397,6 +416,7 @@ export default function Register() {
                 />
                 {errors.otp && <span className="error-message">{errors.otp}</span>}
                 <p className="otp-hint">Mã OTP gồm 6 chữ số</p>
+                <p className="otp-hint">Mã OTP demo: <strong>{otpData.code}</strong></p>
               </div>
 
               <div className="otp-timer">
