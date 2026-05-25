@@ -74,30 +74,6 @@ export default function Register() {
     return newErrors
   }
 
-  const validateStep2 = () => {
-    const newErrors = {}
-    
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Vui lòng nhập họ tên'
-    }
-    
-    if (!formData.emailOrPhone) {
-      newErrors.emailOrPhone = contactType === 'email'
-        ? 'Vui lòng nhập email'
-        : 'Vui lòng nhập số điện thoại'
-    } else if (contactType === 'email') {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.emailOrPhone)) {
-        newErrors.emailOrPhone = 'Email không hợp lệ'
-      }
-    } else {
-      if (!/^[0-9]{10}$/.test(formData.emailOrPhone.replace(/\D/g, ''))) {
-        newErrors.emailOrPhone = 'Số điện thoại không hợp lệ (10 số)'
-      }
-    }
-    
-    return newErrors
-  }
-
   const validateStep3 = () => {
     const newErrors = {}
     
@@ -144,7 +120,7 @@ export default function Register() {
 
   const handleToStepOtp = (e) => {
     e.preventDefault()
-    const newErrors = validateStep2()
+    const newErrors = validateStep3()
     
     if (Object.keys(newErrors).length === 0) {
       setStep(3)

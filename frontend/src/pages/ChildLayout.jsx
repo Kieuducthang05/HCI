@@ -1,27 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, Outlet, useLocation } from 'react-router-dom'
 import '../styles/Child.css'
 
 export default function ChildLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const [activeMenu, setActiveMenu] = useState('home')
   const [userStars, setUserStars] = useState(120)
+  const activeMenu = location.pathname.split('/')[2] || 'home'
 
   const menuItems = [
     { id: 'home', label: 'Trang chủ', icon: '🏠' },
+    { id: 'emotion', label: 'Cảm xúc', icon: '💬' },
     { id: 'avatar', label: 'Avatar', icon: '👤' },
     { id: 'inventory', label: 'Kho', icon: '🎒' }
   ]
 
-  useEffect(() => {
-    // Lấy chính xác đường dẫn hiện tại để active menu tương ứng
-    const path = location.pathname.split('/')[2] || 'home'
-    setActiveMenu(path)
-  }, [location.pathname])
-
   const handleMenuClick = (menuId) => {
-    setActiveMenu(menuId)
     // Sửa ở đây: Đã thêm lệnh navigate tự động theo ID của mọi nút
     navigate(`/child/${menuId}`)
   }

@@ -33,9 +33,12 @@ const GamepadIcon = () => (
   </svg>
 );
 
-const QuestionIcon = () => (
+const EmotionIcon = () => (
   <svg width="45" height="45" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <text x="50%" y="55%" dominantBaseline="middle" textAnchor="middle" fill="#406456" fontSize="70" fontWeight="900" fontFamily="sans-serif">?</text>
+    <circle cx="50" cy="50" r="36" fill="#77BFA3" />
+    <circle cx="38" cy="43" r="5" fill="#FFFFFF" />
+    <circle cx="62" cy="43" r="5" fill="#FFFFFF" />
+    <path d="M35 60 Q50 72 65 60" fill="none" stroke="#FFFFFF" strokeWidth="6" strokeLinecap="round" />
   </svg>
 );
 
@@ -105,7 +108,7 @@ const ActionCard = ({ title, borderColor, bgColor, textColor, icon, onClick }) =
 export default function ChildHome() {
   const navigate = useNavigate();
   // Giữ lại state nếu sau này bạn muốn thay đổi câu chào linh hoạt
-  const [greeting, setGreeting] = useState('Hôm nay con muốn làm gì?');
+  const [greeting] = useState('Hôm nay con muốn làm gì?');
 
   // Hàm xử lý chuyển trang giống code cũ của bạn
   const handleActivityClick = (activityId) => {
@@ -179,13 +182,13 @@ export default function ChildHome() {
             icon={<GamepadIcon />} 
             onClick={() => handleActivityClick('games')} 
           />
-          <ActionCard 
-            title="Câu hỏi" 
-            borderColor="#406456" 
-            bgColor="#BDE2D4" 
-            textColor="#406456" 
-            icon={<QuestionIcon />} 
-            onClick={() => handleActivityClick('questions')} 
+          <ActionCard
+            title="Cảm xúc của con"
+            borderColor="#77BFA3"
+            bgColor="#EAF7F0"
+            textColor="#34765F"
+            icon={<EmotionIcon />}
+            onClick={() => handleActivityClick('emotion')}
           />
           <ActionCard 
             title="Trò chuyện cùng Bạn Thỏ" 

@@ -2,10 +2,10 @@ import { useState } from 'react'
 import '../styles/ParentDashboard.css'
 
 export default function ParentHome() {
-  const [children, setChildren] = useState([
+  const [children] = useState([
     { id: 1, name: 'Bìn', avatar: '👦', emotion: 'Bình thường' }
   ])
-  const [currentChild, setCurrentChild] = useState(children[0])
+  const currentChild = children[0]
 
   // Mock data - thay bằng API sau
   const weeklyData = [

@@ -9,15 +9,6 @@ export default function EmotionDiary() {
     { id: 4, label: 'Cảm xúc tức giận', value: 247, change: '+24 tuần này', color: '#FFB74D' }
   ])
 
-  const [timelineData] = useState([
-    { date: 'T3', value: 45 },
-    { date: 'T4', value: 52 },
-    { date: 'T5', value: 48 },
-    { date: 'T6', value: 55 },
-    { date: 'T7', value: 60 },
-    { date: 'CN', value: 58 }
-  ])
-
   const [emotionBreakdown] = useState([
     { type: 'Tích cực', count: 45, color: '#90CAF9' },
     { type: 'Tiêu cực', count: 30, color: '#EF9A9A' },

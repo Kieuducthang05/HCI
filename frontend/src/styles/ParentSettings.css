@@ -124,6 +124,84 @@
   background: #d1d5db;
 }
 
+/* ===== CURRENT SETTINGS OVERRIDES ===== */
+.child-account-item {
+  grid-template-columns: 220px repeat(3, 1fr) auto;
+}
+
+.delete-child-btn {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #be123c;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delete-child-btn:hover {
+  background: #ffe4e6;
+}
+
+@media (max-width: 1024px) {
+  .regulation-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .new-child-form {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .new-child-form .text-input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .child-account-item {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== REGULATION SETTINGS ===== */
+.regulation-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.quiet-mode-toggle {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.quiet-mode-toggle input {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-action-row {
+  margin-top: 18px;
+}
+
+.new-child-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.new-child-form .text-input {
+  min-width: 180px;
+}
+
 /* ===== CHILDREN ACCOUNTS ===== */
 .children-accounts-list {
   display: flex;
@@ -563,5 +641,30 @@
 
   .stat-value {
     font-size: 12px;
+  }
+}
+
+/* ===== FINAL SETTINGS OVERRIDES ===== */
+.child-account-item {
+  grid-template-columns: 220px repeat(3, 1fr) auto;
+}
+
+@media (max-width: 1024px) {
+  .regulation-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .new-child-form {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .new-child-form .text-input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .child-account-item {
+    grid-template-columns: 1fr;
   }
 }

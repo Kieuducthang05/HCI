@@ -1,20 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useMemo } from 'react'
 import { useNavigate, Outlet, useLocation } from 'react-router-dom'
 import '../styles/ParentDashboard.css'
 
 export default function ParentLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const [activeMenu, setActiveMenu] = useState('home')
-
-  // Update activeMenu when location changes
-  useEffect(() => {
+  const activeMenu = useMemo(() => {
     const path = location.pathname.replace('/parent/', '')
-    if (path === '' || path === '/') {
-      setActiveMenu('home')
-    } else {
-      setActiveMenu(path)
-    }
+    return path === '' || path === '/' ? 'home' : path
   }, [location.pathname])
 
   const menuItems = [
@@ -25,7 +18,6 @@ export default function ParentLayout() {
   ]
 
   const handleMenuClick = (menuId) => {
-    setActiveMenu(menuId)
     navigate(`/parent/${menuId}`)
   }
 

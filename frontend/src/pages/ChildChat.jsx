@@ -47,9 +47,7 @@ export default function ChildChat() {
     '🤔 Tôi bối rối'
   ]
 
-  const generateBunnyResponse = (userMessage) => {
-    const lowerMessage = userMessage.toLowerCase()
-    
+  const generateBunnyResponse = () => {
     const responses = [
       'Thật là tuyệt vời! Em rất vui khi nghe điều đó 🎉',
       'Em hiểu rồi. Cảm xúc của em là rất bình thường. 💚',
@@ -82,7 +80,7 @@ export default function ChildChat() {
       const bunnyResponse = {
         id: messages.length + 2,
         sender: 'thỏ',
-        text: generateBunnyResponse(inputValue),
+        text: generateBunnyResponse(),
         timestamp: new Date()
       }
       setMessages(prev => [...prev, bunnyResponse])

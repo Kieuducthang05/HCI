@@ -4,15 +4,14 @@ import '../styles/Child.css'
 
 export default function ChildAvatar() {
   const navigate = useNavigate()
-  const [selectedAvatar, setSelectedAvatar] = useState('avatar-1')
-  const [avatarItems, setAvatarItems] = useState([
+  const avatarItems = [
     { id: 'head-1', category: 'head', name: 'Mũ hồng', emoji: '🎀', owned: true },
     { id: 'head-2', category: 'head', name: 'Kính mặt trời', emoji: '😎', owned: false },
     { id: 'body-1', category: 'body', name: 'Áo xanh', emoji: '👕', owned: true },
     { id: 'body-2', category: 'body', name: 'Áo hồng', emoji: '👗', owned: false },
     { id: 'pet-1', category: 'pet', name: 'Chim cảnh', emoji: '🐦', owned: true },
     { id: 'pet-2', category: 'pet', name: 'Thỏ', emoji: '🐰', owned: false },
-  ])
+  ]
 
   const [displayedItems, setDisplayedItems] = useState({
     head: '🎀',

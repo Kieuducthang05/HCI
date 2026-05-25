@@ -582,6 +582,22 @@ body.dark-mode {
   }
 }
 
+@media (max-width: 768px) {
+  .emotion-choice-grid,
+  .expression-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .regulation-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .camera-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 .game-card {
   background: white;
   border-radius: 12px;
@@ -868,27 +884,6 @@ body.dark-mode {
   background: var(--child-light);
 }
 
-/* ====== QUESTIONS PAGE ====== */
-
-.child-questions {
-  animation: fadeIn 0.5s ease;
-}
-
-.questions-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: white;
-  margin-bottom: 16px;
-  padding: 0 16px;
-}
-
-.questions-header h2 {
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0;
-}
-
 .close-btn {
   background: rgba(255, 255, 255, 0.2);
   border: none;
@@ -903,114 +898,6 @@ body.dark-mode {
 
 .close-btn:hover {
   background: rgba(255, 255, 255, 0.3);
-}
-
-.question-card {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  margin: 0 16px;
-  animation: slideUp 0.5s ease;
-}
-
-.emoji-display {
-  text-align: center;
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.question-text {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--child-dark);
-  margin: 16px 0;
-  text-align: center;
-}
-
-.options-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 16px 0;
-}
-
-.option-btn {
-  background: white;
-  border: 2px solid #e5e5e5;
-  border-radius: 8px;
-  padding: 12px;
-  text-align: left;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--child-dark);
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.option-btn:hover {
-  border-color: var(--child-primary);
-  background: #f0f4ff;
-}
-
-.option-btn:active {
-  transform: scale(0.98);
-}
-
-.quiz-complete-card {
-  background: white;
-  border-radius: 16px;
-  padding: 28px 20px;
-  margin: 0 16px;
-  text-align: center;
-  box-shadow: var(--child-shadow);
-  animation: slideUp 0.5s ease;
-}
-
-.quiz-complete-emoji {
-  font-size: 56px;
-  margin-bottom: 12px;
-}
-
-.quiz-complete-title {
-  color: var(--child-dark);
-  font-size: 22px;
-  font-weight: 700;
-  margin: 0 0 8px 0;
-}
-
-.quiz-complete-text {
-  color: var(--text-secondary);
-  font-size: 14px;
-  margin: 0 0 16px 0;
-}
-
-.quiz-summary {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin: 20px 0;
-}
-
-.quiz-summary-item {
-  background: #f0f4ff;
-  border-radius: 10px;
-  padding: 14px 10px;
-}
-
-.quiz-summary-item span,
-.quiz-summary-item strong {
-  display: block;
-}
-
-.quiz-summary-item span {
-  color: var(--text-secondary);
-  font-size: 12px;
-  margin-bottom: 6px;
-}
-
-.quiz-summary-item strong {
-  color: var(--child-primary);
-  font-size: 20px;
 }
 
 /* ====== FRIENDS PAGE ====== */
@@ -1374,6 +1261,226 @@ body.dark-mode {
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
+/* ====== CHILD EMOTION TOOL ====== */
+
+.child-emotion-page {
+  max-width: 900px;
+  margin: 0 auto;
+  animation: fadeIn 0.5s ease;
+}
+
+.emotion-tool-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  color: white;
+  padding: 0 16px 16px;
+}
+
+.emotion-tool-header h2 {
+  margin: 0 0 6px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+}
+
+.emotion-tool-header p {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.emotion-picker-panel,
+.expression-panel,
+.regulation-panel,
+.social-hint-panel {
+  background: white;
+  border-radius: 16px;
+  padding: 18px;
+  margin: 0 16px 16px;
+  box-shadow: var(--child-shadow);
+}
+
+.emotion-picker-panel h3,
+.regulation-panel h3,
+.social-hint-panel h3 {
+  margin: 0 0 12px 0;
+  color: var(--child-dark);
+  font-size: 17px;
+}
+
+.emotion-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(90px, 1fr));
+  gap: 10px;
+}
+
+.emotion-choice {
+  border: 3px solid;
+  border-radius: 14px;
+  background: #fff;
+  min-height: 96px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--child-dark);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.emotion-choice.selected {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+  transform: translateY(-2px);
+}
+
+.emotion-choice-icon {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.expression-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.expression-card-main {
+  border: 3px solid;
+  border-radius: 14px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.selected-emotion-icon {
+  font-size: 58px;
+  line-height: 1;
+}
+
+.expression-card-main h3 {
+  margin: 0 0 8px 0;
+  color: var(--child-dark);
+  font-size: 18px;
+}
+
+.expression-card-main p,
+.regulation-panel p,
+.social-hint-panel p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.speak-btn,
+.tool-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #eef2ff;
+  color: var(--child-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.speak-btn {
+  grid-column: 1 / -1;
+}
+
+.tool-btn.primary {
+  background: var(--child-primary);
+  color: white;
+}
+
+.camera-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.camera-preview {
+  background: #111827;
+  border-radius: 14px;
+  min-height: 220px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-preview video {
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  object-fit: cover;
+}
+
+.camera-placeholder {
+  color: white;
+  text-align: center;
+}
+
+.camera-placeholder span {
+  display: block;
+  font-size: 42px;
+  margin-bottom: 8px;
+}
+
+.camera-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.camera-error {
+  color: #dc2626;
+  font-size: 12px;
+}
+
+.scan-result {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 12px;
+  color: #166534;
+}
+
+.scan-result span {
+  font-size: 30px;
+}
+
+.scan-result strong {
+  display: block;
+  font-size: 13px;
+}
+
+.scan-result p {
+  margin: 2px 0 0 0;
+  font-size: 12px;
+}
+
+.regulation-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-left: 5px solid #77bfa3;
+}
+
+.social-hint-panel {
+  border-left: 5px solid #6aa6d9;
+}
+
 /* ====== INVENTORY PAGE ====== */
 
 .child-inventory {
@@ -1584,10 +1691,6 @@ body.dark-mode {
   .games-grid {
     grid-template-columns: 1fr;
     gap: 10px;
-  }
-
-  .question-text {
-    font-size: 14px;
   }
 
   .emotion-options,
@@ -1869,7 +1972,6 @@ body.dark-mode {
   .tab,
   .lesson-card,
   .game-container,
-  .question-card,
   .friend-detail,
   .child-avatar-page,
   .child-inventory {
@@ -1879,7 +1981,6 @@ body.dark-mode {
 
   .emotion-title,
   .expression-title,
-  .question-text,
   .game-title,
   .friend-name,
   .detail-name {
@@ -1888,12 +1989,10 @@ body.dark-mode {
 
   .emotion-description,
   .expression-description,
-  .option-btn,
   .reaction-btn {
     color: #b0b0b0;
   }
 
-  .option-btn,
   .reaction-btn,
   .emotion-btn,
   .match-btn {

@@ -12,9 +12,9 @@ import ChildLayout from './pages/ChildLayout'
 import ChildHome from './pages/ChildHome'
 import ChildLearn from './pages/ChildLearn'
 import ChildGames from './pages/ChildGames'
-import ChildQuestions from './pages/ChildQuestions'
 import ChildFriends from './pages/ChildFriends'
 import ChildChat from './pages/ChildChat'
+import ChildEmotion from './pages/ChildEmotion'
 import ChildAvatar from './pages/ChildAvatar'
 import ChildInventory from './pages/ChildInventory'
 import './App.css'
@@ -43,8 +43,8 @@ function App() {
           <Route path="home" element={<ChildHome />} />
           <Route path="learn" element={<ChildLearn />} />
           <Route path="games" element={<ChildGames />} />
-          <Route path="questions" element={<ChildQuestions />} />
           <Route path="chat" element={<ChildChat />} />
+          <Route path="emotion" element={<ChildEmotion />} />
           <Route path="friends" element={<ChildFriends />} />
           <Route path="avatar" element={<ChildAvatar />} />
           <Route path="inventory" element={<ChildInventory />} />
