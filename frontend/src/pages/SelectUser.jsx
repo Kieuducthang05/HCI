@@ -1,55 +1,79 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { authApi, childrenApi, clearSession, getSession, setSelectedChild } from '../services/api'
 import '../styles/Auth.css'
 
 export default function SelectUser() {
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
+  const [children, setChildren] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  // Mock data - sau này sẽ lấy từ API
-  const users = [
+  useEffect(() => {
+    const session = getSession()
+    if (!session?.session?.session_token) {
+      navigate('/login', { replace: true })
+      return
+    }
+
+    let mounted = true
+    childrenApi.list()
+      .then((result) => {
+        if (!mounted) return
+        setChildren(result.children || [])
+      })
+      .catch((err) => {
+        if (!mounted) return
+        setError(err.message || 'Không tải được danh sách trẻ.')
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [navigate])
+
+  const users = useMemo(() => [
     {
-      id: 'parent-1',
+      id: 'parent',
       type: 'parent',
       name: 'Khu vực của Bố/Mẹ',
-      description: 'Quản lý và theo dõi',
-      icon: (
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="9" cy="7" r="2" fill="currentColor"/>
-          <path d="M7 9h4a1 1 0 0 1 1 1v3H6v-3a1 1 0 0 1 1-1z" fill="currentColor"/>
-          <circle cx="17" cy="7" r="2" fill="currentColor"/>
-          <path d="M15 9h4a1 1 0 0 1 1 1v3h-5v-3a1 1 0 0 1 1-1z" fill="currentColor"/>
-          <path d="M4 19c0-1.5 1.5-3 3-3h1.5c.276 0 .5.224.5.5v3.5H4z" fill="currentColor"/>
-          <path d="M16 19c0-1.5 1.5-3 3-3h1.5c.276 0 .5.224.5.5v3.5H16z" fill="currentColor"/>
-          <path d="M8 13h8v2H8z" fill="currentColor"/>
-        </svg>
-      )
+      description: 'Quản lý và theo dõi tiến trình của con',
+      avatar: '👨‍👩‍👧',
     },
-    {
-      id: 'child-1',
+    ...children.map((child) => ({
+      id: child.id,
       type: 'child',
-      name: 'Bin',
+      name: child.nickname || 'Bé',
       description: 'Chào mừng con quay lại!',
-      avatar: '👦',
-      bgColor: '#d4d4d4' // màu nền xám của card trẻ em
-    }
-  ]
+      avatar: child.avatar_url ? null : '🧒',
+      avatarUrl: child.avatar_url,
+      child,
+    })),
+  ], [children])
 
-  const handleSelectUser = (userId, userType) => {
-    setLoading(true)
-    // TODO: Lưu user selection vào context/localStorage
-    console.log(`Đã chọn: ${userId} (${userType})`)
-    
-    // Simulate API call
-    setTimeout(() => {
-      // Navigate to home page or dashboard based on user type
-      if (userType === 'parent') {
-        navigate('/parent/home')
-      } else {
-        navigate('/child/home')
-      }
-      setLoading(false)
-    }, 500)
+  const handleSelectUser = (user) => {
+    if (user.type === 'parent') {
+      setSelectedChild(children[0] || null)
+      navigate('/parent/home')
+      return
+    }
+
+    setSelectedChild(user.child)
+    navigate('/child/home')
+  }
+
+  const handleLogout = async () => {
+    try {
+      await authApi.signOut()
+    } catch {
+      // Local logout is still valid if the server is already unavailable.
+    } finally {
+      clearSession()
+      navigate('/login')
+    }
   }
 
   return (
@@ -58,27 +82,27 @@ export default function SelectUser() {
         <div className="auth-form select-user-form">
           <div className="auth-header">
             <h1>Ai đang ở đây vậy?</h1>
+            {loading && <p>Đang tải danh sách tài khoản...</p>}
+            {error && <p className="error-message">{error}</p>}
+            {!loading && !error && children.length === 0 && (
+              <p>Chưa có tài khoản trẻ. Vào khu vực bố mẹ để tạo tài khoản cho bé.</p>
+            )}
           </div>
 
           <div className="select-user-grid">
-            {users.map(user => (
+            {users.map((user) => (
               <button
                 key={user.id}
                 type="button"
                 className={`user-card ${user.type === 'parent' ? 'parent-card' : 'child-card'}`}
-                style={user.bgColor ? { backgroundColor: user.bgColor } : {}}
-                onClick={() => handleSelectUser(user.id, user.type)}
+                onClick={() => handleSelectUser(user)}
                 disabled={loading}
               >
                 <div className="user-icon">
-                  {user.type === 'parent' ? (
-                    <div className="icon-circle">
-                      {user.icon}
-                    </div>
+                  {user.avatarUrl ? (
+                    <img className="avatar-circle" src={user.avatarUrl} alt={user.name} />
                   ) : (
-                    <div className="avatar-circle">
-                      {user.avatar}
-                    </div>
+                    <div className="avatar-circle">{user.avatar}</div>
                   )}
                 </div>
                 <h3>{user.name}</h3>
@@ -88,11 +112,7 @@ export default function SelectUser() {
           </div>
 
           <div className="auth-footer">
-            <button 
-              type="button"
-              className="logout-btn"
-              onClick={() => navigate('/login')}
-            >
+            <button type="button" className="logout-btn" onClick={handleLogout}>
               Đăng nhập tài khoản khác
             </button>
           </div>

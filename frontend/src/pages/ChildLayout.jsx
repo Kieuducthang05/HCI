@@ -1,12 +1,29 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, Outlet, useLocation } from 'react-router-dom'
+import { childrenApi, getSelectedChild, setSelectedChild } from '../services/api'
 import '../styles/Child.css'
 
 export default function ChildLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const [userStars, setUserStars] = useState(120)
+  const selectedChild = getSelectedChild()
+  const [userStars, setUserStars] = useState(selectedChild?.total_stars || 0)
   const activeMenu = location.pathname.split('/')[2] || 'home'
+
+  useEffect(() => {
+    const child = getSelectedChild()
+    if (!child?.id) return
+
+    childrenApi.detail(child.id)
+      .then((result) => {
+        if (!result.child) return
+        setSelectedChild(result.child)
+        setUserStars(result.child.total_stars || 0)
+      })
+      .catch(() => {
+        setUserStars(child.total_stars || 0)
+      })
+  }, [])
 
   const menuItems = [
     { id: 'home', label: 'Trang chủ', icon: '🏠' },

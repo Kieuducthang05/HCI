@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getSelectedChild, trackingApi } from '../services/api'
 import '../styles/Child.css'
 
 const emotions = [
@@ -61,6 +62,7 @@ export default function ChildEmotion() {
   const [cameraError, setCameraError] = useState('')
   const [scanResult, setScanResult] = useState(null)
   const [currentStep, setCurrentStep] = useState(0)
+  const [saveMessage, setSaveMessage] = useState('')
 
   const oppositeHint = useMemo(() => {
     if (selectedEmotion.id === 'happy' || selectedEmotion.id === 'calm') {
@@ -88,6 +90,7 @@ export default function ChildEmotion() {
   const startCamera = async () => {
     setCameraError('')
     setScanResult(null)
+    setSaveMessage('')
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
@@ -117,11 +120,32 @@ export default function ChildEmotion() {
     }
 
     const confidence = 82 + Math.floor(Math.random() * 14)
-    setScanResult({
+    const result = {
       icon: selectedEmotion.icon,
       confidence,
       message: `Biểu cảm của con đang gần với cảm xúc "${selectedEmotion.label}".`
+    }
+    setScanResult(result)
+
+    const child = getSelectedChild()
+    if (!child?.id) {
+      setSaveMessage('Chưa chọn tài khoản trẻ nên chưa lưu nhật ký.')
+      return
+    }
+
+    trackingApi.recordEmotionLog(child.id, {
+      emotion_value: selectedEmotion.id,
+      trigger_source: 'WEBCAM',
+      ai_emotion_label: selectedEmotion.id,
+      ai_confidence: confidence / 100,
+      confidence_score: confidence / 100,
+      metadata: {
+        source: 'child-emotion-page',
+        simulated: true,
+      },
     })
+      .then(() => setSaveMessage('Đã lưu cảm xúc vào nhật ký.'))
+      .catch(() => setSaveMessage('Chưa lưu được nhật ký. Hãy kiểm tra kết nối backend.'))
   }
 
   return (
@@ -145,6 +169,7 @@ export default function ChildEmotion() {
               onClick={() => {
                 setSelectedEmotion(emotion)
                 setScanResult(null)
+                setSaveMessage('')
               }}
             >
               <span className="emotion-choice-icon">{emotion.icon}</span>
@@ -194,6 +219,7 @@ export default function ChildEmotion() {
               <div>
                 <strong>{scanResult.message}</strong>
                 <p>Độ tin cậy mô phỏng: {scanResult.confidence}%</p>
+                {saveMessage && <p>{saveMessage}</p>}
               </div>
             </div>
           )}
