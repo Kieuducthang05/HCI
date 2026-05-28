@@ -113,7 +113,7 @@ export async function verifyPasswordResetCode(identifier: string, otp: string) {
     );
   }
 
-  const normalizedIdentifier = identifier.trim().toLowerCase();
+  const normalizedIdentifier = normalizeIdentifier(identifier);
 
   try {
     const user = await findUserByIdentifier(db, normalizedIdentifier);
@@ -193,7 +193,7 @@ export async function confirmPasswordReset(
   }
 
   try {
-    const user = await findUserByIdentifier(db, identifier.trim().toLowerCase());
+    const user = await findUserByIdentifier(db, normalizeIdentifier(identifier));
     if (!user) {
       throw new AppError<PasswordResetErrorType>("INVALID_CODE", "Invalid token.", 400);
     }

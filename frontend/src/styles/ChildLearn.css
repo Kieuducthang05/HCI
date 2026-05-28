@@ -49,6 +49,24 @@
   transform: scale(0.98);
 }
 
+.learn-complete-btn {
+  margin-top: 22px;
+  border: none;
+  border-radius: 14px;
+  padding: 14px 22px;
+  background: #2b50a1;
+  color: #fff;
+  font-weight: 800;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(43, 80, 161, 0.22);
+}
+
+.learn-complete-btn:hover {
+  background: #1f3d82;
+  transform: translateY(-1px);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .result-card {

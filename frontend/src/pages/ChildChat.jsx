@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { chatbotApi, getSelectedChild, trackingApi } from '../services/api'
 import '../styles/ChildChat.css'
 
 const BunnyIcon = () => (
@@ -18,6 +19,14 @@ const BunnyIcon = () => (
   </svg>
 )
 
+function formatParentAlertReason(alert) {
+  const severity = alert.severity ? `Mức độ: ${alert.severity}` : ''
+  const reason = alert.reason ? `Lý do: ${alert.reason}` : ''
+  const childMessage = alert.child_message ? `Tin nhắn của trẻ: ${alert.child_message}` : ''
+
+  return [severity, reason, childMessage].filter(Boolean).join(' | ').slice(0, 1000)
+}
+
 export default function ChildChat() {
   const navigate = useNavigate()
   const [messages, setMessages] = useState([
@@ -30,6 +39,8 @@ export default function ChildChat() {
   ])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [chatHistory, setChatHistory] = useState([])
+  const [conversationSummary, setConversationSummary] = useState('')
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -47,27 +58,14 @@ export default function ChildChat() {
     '🤔 Tôi bối rối'
   ]
 
-  const generateBunnyResponse = () => {
-    const responses = [
-      'Thật là tuyệt vời! Em rất vui khi nghe điều đó 🎉',
-      'Em hiểu rồi. Cảm xúc của em là rất bình thường. 💚',
-      'Em có thể giúp em với việc đó không? 🤔',
-      'Wow! Điều đó nghe rất hay! ✨',
-      'Em cảm thấy sao khi suy nghĩ về nó? 💭',
-      'Em muốn chia sẻ thêm gì không? Thỏ đang lắng nghe đây! 👂'
-    ]
-    
-    return responses[Math.floor(Math.random() * responses.length)]
-  }
-
   const handleSendMessage = async () => {
     if (inputValue.trim() === '') return
 
-    // Thêm tin nhắn của người dùng
+    const userText = inputValue.trim()
     const userMessage = {
       id: messages.length + 1,
       sender: 'user',
-      text: inputValue,
+      text: userText,
       timestamp: new Date()
     }
 
@@ -75,17 +73,57 @@ export default function ChildChat() {
     setInputValue('')
     setIsLoading(true)
 
-    // Mô phỏng độ trễ API
-    setTimeout(() => {
+    try {
+      const result = await chatbotApi.chat({
+        message: userText,
+        history: chatHistory,
+        conversationSummary,
+      })
+
       const bunnyResponse = {
         id: messages.length + 2,
         sender: 'thỏ',
-        text: generateBunnyResponse(),
+        text: result.reply || 'Thỏ chưa nghĩ ra câu trả lời. Em thử nói lại nhé.',
         timestamp: new Date()
       }
+
       setMessages(prev => [...prev, bunnyResponse])
+      setConversationSummary(result.conversation_summary || '')
+      setChatHistory(prev => {
+        const nextHistory = [
+          ...prev,
+          {
+            user: userText,
+            assistant: bunnyResponse.text,
+          },
+        ]
+
+        return nextHistory.slice(-5)
+      })
+
+      if (result.parent_alert?.reason) {
+        const selectedChild = getSelectedChild()
+        const alertReason = formatParentAlertReason(result.parent_alert)
+        if (selectedChild?.id) {
+          trackingApi.createAlert(selectedChild.id, alertReason).catch((error) => {
+            console.error('Could not record chatbot alert:', error)
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Chatbot request failed:', error)
+      setMessages(prev => [
+        ...prev,
+        {
+          id: messages.length + 2,
+          sender: 'thỏ',
+          text: 'Thỏ chưa kết nối được máy chủ trò chuyện. Em thử lại sau nhé.',
+          timestamp: new Date()
+        }
+      ])
+    } finally {
       setIsLoading(false)
-    }, 800)
+    }
   }
 
   const handleQuickReply = (reply) => {

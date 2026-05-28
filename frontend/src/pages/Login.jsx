@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authApi, setSession } from '../services/api'
 import '../styles/Auth.css'
 
 export default function Login() {
   const navigate = useNavigate()
+  const googleButtonRef = useRef(null)
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
   const [inputType, setInputType] = useState('email')
   const [formData, setFormData] = useState({
     emailOrPhone: '',
@@ -12,6 +14,66 @@ export default function Login() {
   })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!googleClientId || !googleButtonRef.current) return undefined
+
+    let cancelled = false
+
+    const renderGoogleButton = () => {
+      if (cancelled || !window.google?.accounts?.id || !googleButtonRef.current) return
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async (response) => {
+          if (!response?.credential) {
+            setErrors({ submit: 'Không nhận được Google ID token.' })
+            return
+          }
+
+          try {
+            setLoading(true)
+            const result = await authApi.googleSignIn(response.credential)
+            setSession(result)
+            navigate(result.user?.role === 'ADMIN' ? '/admin' : '/select-user')
+          } catch (error) {
+            setErrors({ submit: error.message || 'Đăng nhập Google thất bại.' })
+          } finally {
+            setLoading(false)
+          }
+        },
+      })
+
+      googleButtonRef.current.innerHTML = ''
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: 'outline',
+        size: 'large',
+        width: googleButtonRef.current.offsetWidth || 360,
+        text: 'signin_with',
+      })
+    }
+
+    if (window.google?.accounts?.id) {
+      renderGoogleButton()
+    } else {
+      const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]')
+      if (existingScript) {
+        existingScript.addEventListener('load', renderGoogleButton, { once: true })
+      } else {
+        const script = document.createElement('script')
+        script.src = 'https://accounts.google.com/gsi/client'
+        script.async = true
+        script.defer = true
+        script.onload = renderGoogleButton
+        script.onerror = () => setErrors({ submit: 'Không tải được Google Sign-In SDK.' })
+        document.head.appendChild(script)
+      }
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [googleClientId, navigate])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -59,7 +121,7 @@ export default function Login() {
         password: formData.password,
       })
       setSession(result)
-      navigate('/select-user')
+      navigate(result.user?.role === 'ADMIN' ? '/admin' : '/select-user')
     } catch (error) {
       setErrors({ submit: error.message || 'Đăng nhập thất bại. Vui lòng thử lại.' })
     } finally {
@@ -67,8 +129,10 @@ export default function Login() {
     }
   }
 
-  const handleGoogleLogin = () => {
-    setErrors({ submit: 'Đăng nhập Google cần tích hợp Google Sign-In SDK để lấy id_token thật.' })
+  const switchInputType = (type) => {
+    setInputType(type)
+    setFormData((prev) => ({ ...prev, emailOrPhone: '' }))
+    setErrors({})
   }
 
   return (
@@ -85,22 +149,14 @@ export default function Login() {
               <button
                 type="button"
                 className={`toggle-btn ${inputType === 'email' ? 'active' : ''}`}
-                onClick={() => {
-                  setInputType('email')
-                  setFormData((prev) => ({ ...prev, emailOrPhone: '' }))
-                  setErrors({})
-                }}
+                onClick={() => switchInputType('email')}
               >
                 Email
               </button>
               <button
                 type="button"
                 className={`toggle-btn ${inputType === 'phone' ? 'active' : ''}`}
-                onClick={() => {
-                  setInputType('phone')
-                  setFormData((prev) => ({ ...prev, emailOrPhone: '' }))
-                  setErrors({})
-                }}
+                onClick={() => switchInputType('phone')}
               >
                 Số điện thoại
               </button>
@@ -146,9 +202,11 @@ export default function Login() {
             <span>Hoặc</span>
           </div>
 
-          <button type="button" className="btn-google" onClick={handleGoogleLogin} disabled={loading}>
-            Đăng nhập với Google
-          </button>
+          {googleClientId ? (
+            <div ref={googleButtonRef} className="google-sdk-button" />
+          ) : (
+            <p className="error-message">Thiếu VITE_GOOGLE_CLIENT_ID trong frontend/.env để bật Google Login.</p>
+          )}
 
           <p className="auth-footer">
             Chưa có tài khoản? <Link to="/register" className="link-register">Đăng kí ngay</Link>

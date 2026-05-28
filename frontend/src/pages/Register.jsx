@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authApi, setSession } from '../services/api'
 import '../styles/Auth.css'
@@ -13,39 +13,14 @@ export default function Register() {
     password: '',
     confirmPassword: '',
   })
-  const [otpData, setOtpData] = useState({
-    otp: '',
-    timer: 0,
-    code: '',
-  })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (step !== 3 || otpData.timer <= 0) return undefined
-
-    const timerId = setTimeout(() => {
-      setOtpData((prev) => ({ ...prev, timer: Math.max(prev.timer - 1, 0) }))
-    }, 1000)
-
-    return () => clearTimeout(timerId)
-  }, [otpData.timer, step])
-
-  const createMockOtp = () => String(Math.floor(100000 + Math.random() * 900000))
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
     if (errors[name] || errors.submit) {
       setErrors((prev) => ({ ...prev, [name]: '', submit: '' }))
-    }
-  }
-
-  const handleOtpChange = (e) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6)
-    setOtpData((prev) => ({ ...prev, otp: value }))
-    if (errors.otp || errors.submit) {
-      setErrors((prev) => ({ ...prev, otp: '', submit: '' }))
     }
   }
 
@@ -89,19 +64,6 @@ export default function Register() {
     return newErrors
   }
 
-  const validateOtp = () => {
-    const newErrors = {}
-    if (!otpData.otp) {
-      newErrors.otp = 'Vui lòng nhập OTP'
-    } else if (otpData.otp.length !== 6) {
-      newErrors.otp = 'OTP phải có 6 số'
-    } else if (otpData.otp !== otpData.code) {
-      newErrors.otp = 'Mã OTP chưa đúng'
-    }
-
-    return newErrors
-  }
-
   const handleNextStep = (e) => {
     e.preventDefault()
     const newErrors = validateStep1()
@@ -114,22 +76,9 @@ export default function Register() {
     setErrors({})
   }
 
-  const handleToStepOtp = (e) => {
+  const handleSubmitRegister = async (e) => {
     e.preventDefault()
     const newErrors = validatePassword()
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      return
-    }
-
-    setStep(3)
-    setErrors({})
-    setOtpData({ otp: '', timer: 60, code: createMockOtp() })
-  }
-
-  const handleSubmitOtp = async (e) => {
-    e.preventDefault()
-    const newErrors = validateOtp()
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
       return
@@ -157,11 +106,6 @@ export default function Register() {
     }
   }
 
-  const handleResendOtp = () => {
-    setOtpData({ otp: '', timer: 60, code: createMockOtp() })
-    setErrors((prev) => ({ ...prev, otp: '' }))
-  }
-
   const selectContactType = (type) => {
     setContactType(type)
     setFormData((prev) => ({ ...prev, emailOrPhone: '' }))
@@ -182,8 +126,6 @@ export default function Register() {
               <div className="progress-step"><span className="progress-number active">1</span><span>Thông tin</span></div>
               <div className="progress-line"></div>
               <div className="progress-step"><span className="progress-number">2</span><span>Mật khẩu</span></div>
-              <div className="progress-line"></div>
-              <div className="progress-step"><span className="progress-number">3</span><span>Xác thực</span></div>
             </div>
 
             <form onSubmit={handleNextStep}>
@@ -238,119 +180,64 @@ export default function Register() {
     )
   }
 
-  if (step === 2) {
-    return (
-      <div className="auth-container">
-        <div className="auth-form-wrapper">
-          <div className="auth-form">
-            <div className="auth-header">
-              <h1>Đặt mật khẩu</h1>
-              <p>Tạo mật khẩu bảo mật cho tài khoản.</p>
-            </div>
-
-            <div className="progress-indicator">
-              <div className="progress-step"><span className="progress-number">1</span><span>Thông tin</span></div>
-              <div className="progress-line"></div>
-              <div className="progress-step"><span className="progress-number active">2</span><span>Mật khẩu</span></div>
-              <div className="progress-line"></div>
-              <div className="progress-step"><span className="progress-number">3</span><span>Xác thực</span></div>
-            </div>
-
-            <form onSubmit={handleToStepOtp}>
-              <div className="form-group">
-                <label htmlFor="password">Mật khẩu</label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  placeholder="Nhập mật khẩu tối thiểu 8 ký tự"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={errors.password ? 'input-error' : ''}
-                />
-                {errors.password && <span className="error-message">{errors.password}</span>}
-                <div className="password-requirements">
-                  <p>Mật khẩu phải chứa:</p>
-                  <ul>
-                    <li className={formData.password.length >= 8 ? 'valid' : ''}>✓ Ít nhất 8 ký tự</li>
-                    <li className={/[A-Z]/.test(formData.password) ? 'valid' : ''}>✓ Chữ hoa (A-Z)</li>
-                    <li className={/[a-z]/.test(formData.password) ? 'valid' : ''}>✓ Chữ thường (a-z)</li>
-                    <li className={/\d/.test(formData.password) ? 'valid' : ''}>✓ Số (0-9)</li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  placeholder="Xác nhận mật khẩu"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className={errors.confirmPassword ? 'input-error' : ''}
-                />
-                {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
-              </div>
-
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setStep(1)}>Quay lại</button>
-                <button type="submit" className="btn-primary">Tiếp theo</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="auth-container">
       <div className="auth-form-wrapper">
         <div className="auth-form">
           <div className="auth-header">
-            <h1>Xác thực tài khoản</h1>
-            <p>Nhập mã OTP được gửi đến {contactType === 'email' ? 'email' : 'số điện thoại'} của bạn.</p>
+            <h1>Đặt mật khẩu</h1>
+            <p>Tạo mật khẩu bảo mật cho tài khoản.</p>
           </div>
 
           <div className="progress-indicator">
             <div className="progress-step"><span className="progress-number">1</span><span>Thông tin</span></div>
             <div className="progress-line"></div>
-            <div className="progress-step"><span className="progress-number">2</span><span>Mật khẩu</span></div>
-            <div className="progress-line"></div>
-            <div className="progress-step"><span className="progress-number active">3</span><span>Xác thực</span></div>
+            <div className="progress-step"><span className="progress-number active">2</span><span>Mật khẩu</span></div>
           </div>
 
-          <form onSubmit={handleSubmitOtp}>
+          <form onSubmit={handleSubmitRegister}>
             <div className="form-group">
-              <label htmlFor="otp">Mã OTP</label>
+              <label htmlFor="password">Mật khẩu</label>
               <input
-                type="text"
-                id="otp"
-                maxLength="6"
-                placeholder="000000"
-                value={otpData.otp}
-                onChange={handleOtpChange}
-                className={`otp-input ${errors.otp ? 'input-error' : ''}`}
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Nhập mật khẩu tối thiểu 8 ký tự"
+                value={formData.password}
+                onChange={handleChange}
+                className={errors.password ? 'input-error' : ''}
               />
-              {errors.otp && <span className="error-message">{errors.otp}</span>}
-              {errors.submit && <span className="error-message">{errors.submit}</span>}
-              <p className="otp-hint">Mã OTP demo: <strong>{otpData.code}</strong></p>
+              {errors.password && <span className="error-message">{errors.password}</span>}
+              <div className="password-requirements">
+                <p>Mật khẩu phải chứa:</p>
+                <ul>
+                  <li className={formData.password.length >= 8 ? 'valid' : ''}>✓ Ít nhất 8 ký tự</li>
+                  <li className={/[A-Z]/.test(formData.password) ? 'valid' : ''}>✓ Chữ hoa (A-Z)</li>
+                  <li className={/[a-z]/.test(formData.password) ? 'valid' : ''}>✓ Chữ thường (a-z)</li>
+                  <li className={/\d/.test(formData.password) ? 'valid' : ''}>✓ Số (0-9)</li>
+                </ul>
+              </div>
             </div>
 
-            <div className="otp-timer">
-              {otpData.timer > 0 ? (
-                <p>Gửi lại mã trong <span className="timer">{otpData.timer}s</span></p>
-              ) : (
-                <button type="button" className="resend-otp" onClick={handleResendOtp}>Gửi lại mã OTP</button>
-              )}
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                placeholder="Xác nhận mật khẩu"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className={errors.confirmPassword ? 'input-error' : ''}
+              />
+              {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
+              {errors.submit && <span className="error-message">{errors.submit}</span>}
             </div>
 
             <div className="form-actions">
-              <button type="button" className="btn-secondary" onClick={() => setStep(2)} disabled={loading}>Quay lại</button>
+              <button type="button" className="btn-secondary" onClick={() => setStep(1)} disabled={loading}>Quay lại</button>
               <button type="submit" className="btn-primary" disabled={loading}>
-                {loading ? 'Đang tạo tài khoản...' : 'Hoàn thành'}
+                {loading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}
               </button>
             </div>
           </form>

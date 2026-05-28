@@ -1,283 +1,372 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
+import { contentApi, getSelectedChild, setSelectedChild } from '../services/api'
 import '../styles/Child.css'
 import '../styles/ChildLearn.css'
 import '../styles/ResultScreen.css'
 
+const emotionLabels = {
+  JOY: { label: 'Vui vẻ', emoji: '😊', color: '#ffd700' },
+  HAPPY: { label: 'Vui vẻ', emoji: '😊', color: '#ffd700' },
+  SAD: { label: 'Buồn', emoji: '😢', color: '#87ceeb' },
+  ANGRY: { label: 'Tức giận', emoji: '😡', color: '#ff6b6b' },
+  CALM: { label: 'Bình tĩnh', emoji: '😌', color: '#90ee90' },
+  SCARED: { label: 'Sợ', emoji: '😨', color: '#a67bb8' },
+  SURPRISED: { label: 'Ngạc nhiên', emoji: '😮', color: '#dda0dd' },
+}
+
+function normalizeEmotion(value) {
+  return String(value || '').trim().toUpperCase()
+}
+
+function emotionInfo(value) {
+  return emotionLabels[normalizeEmotion(value)] || {
+    label: value || 'Cảm xúc',
+    emoji: '🙂',
+    color: '#b8d8f2',
+  }
+}
+
+function getContentDescription(content) {
+  return content.lecture?.description || content.quiz?.description || 'Bài học cảm xúc'
+}
+
+function getContentMedia(content) {
+  return content.lecture?.media_url || content.quiz?.media_url || '🙂'
+}
+
+function makeSessionKey(contentId) {
+  if (window.crypto?.randomUUID) return `learn-${contentId}-${window.crypto.randomUUID()}`
+  return `learn-${contentId}-${Date.now()}`
+}
+
 export default function ChildLearn() {
   const navigate = useNavigate()
-  const [currentLesson, setCurrentLesson] = useState('emotions')
+  const { setUserStars } = useOutletContext()
+  const selectedChild = getSelectedChild()
+  const [currentTab, setCurrentTab] = useState('LECTURE')
+  const [contents, setContents] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [showResult, setShowResult] = useState(null) // null, 'correct', 'incorrect'
-  const [score, setScore] = useState(0)
+  const [showResult, setShowResult] = useState(null)
+  const [lastOutcome, setLastOutcome] = useState(null)
+  const [earnedStars, setEarnedStars] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const emotionRecognition = [
-    {
-      id: 1,
-      emotion: 'Vui vẻ',
-      emoji: '😊',
-      description: 'Khi bé cảm thấy hạnh phúc',
-      color: '#ffd700',
-      examples: ['Chơi với bạn', 'Ăn kem', 'Được kỉ niệm'],
-      question: 'Mặt nào dưới đây thể hiện cảm xúc VUI VẺ?',
-      options: ['😊 (Vui vẻ)', '😢 (Buồn)', '😡 (Tức giận)'],
-      correctAnswer: 0,
-      explanation: 'Cảm xúc vui vẻ thường được thể hiện bằng nụ cười rực rỡ và đôi mắt sáng lên. Biểu tượng 😊 là cảm xúc vui vẻ.'
-    },
-    {
-      id: 2,
-      emotion: 'Buồn',
-      emoji: '😢',
-      description: 'Khi bé cảm thấy tâm trạng không tốt',
-      color: '#87ceeb',
-      examples: ['Mất một đồ chơi yêu thích', 'Bị bạn làm tổn thương', 'Cô đơn'],
-      question: 'Mặt nào thể hiện cảm xúc BUỒN?',
-      options: ['😊 (Vui vẻ)', '😢 (Buồn)', '😡 (Tức giận)'],
-      correctAnswer: 1,
-      explanation: 'Cảm xúc buồn được thể hiện bằng nước mắt, miệng cau có. Biểu tượng 😢 là cảm xúc buồn bã.'
-    },
-    {
-      id: 3,
-      emotion: 'Tức giận',
-      emoji: '😡',
-      description: 'Khi bé cảm thấy bực bội',
-      color: '#ff6b6b',
-      examples: ['Không được điều mong muốn', 'Ai đó đánh phá đồ chơi', 'Cảm thấy không công bằng'],
-      question: 'Mặt nào thể hiện cảm xúc TỨC GIẬN?',
-      options: ['😊 (Vui vẻ)', '😡 (Tức giận)', '😌 (Bình tĩnh)'],
-      correctAnswer: 1,
-      explanation: 'Cảm xúc tức giận được thể hiện bằng mặt nhăn nhó, mắt nhìn thẳng. Biểu tượng 😡 là cảm xúc tức giận.'
-    },
-    {
-      id: 4,
-      emotion: 'Sợ',
-      emoji: '😨',
-      description: 'Khi bé cảm thấy lo sợ',
-      color: '#a67bb8',
-      examples: ['Khi tối tăm', 'Gặp điều mới lạ', 'Nghe âm thanh lạ'],
-      question: 'Mặt nào thể hiện cảm xúc SỢ?',
-      options: ['😨 (Sợ)', '😊 (Vui vẻ)', '😌 (Bình tĩnh)'],
-      correctAnswer: 0,
-      explanation: 'Cảm xúc sợ hãi được thể hiện bằng mắt mở to, mồm há. Biểu tượng 😨 là cảm xúc sợ hãi.'
-    },
-    {
-      id: 5,
-      emotion: 'Bình tĩnh',
-      emoji: '😌',
-      description: 'Khi bé cảm thấy yên bình',
-      color: '#90ee90',
-      examples: ['Ngồi bên mẹ', 'Nghe nhạc soothing', 'Làm việc yêu thích'],
-      question: 'Mặt nào thể hiện cảm xúc BÌNH TĨNH?',
-      options: ['😌 (Bình tĩnh)', '😢 (Buồn)', '😡 (Tức giận)'],
-      correctAnswer: 0,
-      explanation: 'Cảm xúc bình tĩnh được thể hiện bằng gương mặt thoải mái, mắt nhắm có yên. Biểu tượng 😌 là cảm xúc bình tĩnh.'
+  useEffect(() => {
+    if (!selectedChild?.id) {
+      return
     }
-  ]
 
-  const emotionalExpression = [
-    {
-      id: 1,
-      title: 'Cách nói',
-      emoji: '💬',
-      description: 'Nói ra cảm xúc của mình',
-      tip: 'Ví dụ: "Em cảm thấy buồn" thay vì im lặng'
-    },
-    {
-      id: 2,
-      title: 'Cách vẽ',
-      emoji: '🎨',
-      description: 'Vẽ để thể hiện cảm xúc',
-      tip: 'Màu sắc và nét vẽ phản ánh cảm xúc'
-    },
-    {
-      id: 3,
-      title: 'Cách khiêu vũ',
-      emoji: '💃',
-      description: 'Nhảy theo cảm xúc',
-      tip: 'Khi vui vẻ là những bước nhảy nhẹ nhàng'
-    },
-    {
-      id: 4,
-      title: 'Cách viết',
-      emoji: '✍️',
-      description: 'Viết nhật kỳ cảm xúc',
-      tip: 'Ghi lại cảm xúc mỗi ngày'
+    let mounted = true
+    Promise.all([
+      contentApi.list(selectedChild.id, { type: 'LECTURE', include_locked: true }),
+      contentApi.list(selectedChild.id, { type: 'QUIZ', include_locked: true }),
+    ])
+      .then(([lectureResult, quizResult]) => {
+        if (!mounted) return
+        setContents([...(lectureResult.contents || []), ...(quizResult.contents || [])])
+        setError('')
+      })
+      .catch((err) => {
+        if (mounted) setError(err.message || 'Không tải được nội dung học từ backend.')
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+
+    return () => {
+      mounted = false
     }
-  ]
+  }, [selectedChild?.id])
 
-  const lessons = {
-    emotions: emotionRecognition,
-    expression: emotionalExpression
+  const tabContents = useMemo(
+    () => contents.filter((content) => content.type === currentTab),
+    [contents, currentTab],
+  )
+  const current = tabContents[currentIndex]
+
+  const updateStars = (totalStars) => {
+    if (typeof totalStars !== 'number') return
+    setUserStars(totalStars)
+    setSelectedChild({ ...selectedChild, total_stars: totalStars })
   }
 
-  const current = lessons[currentLesson][currentIndex]
+  const ensureUnlocked = async (content) => {
+    if (!selectedChild?.id || !content) return false
+    if (content.is_unlocked || content.isUnlocked || content.unlock) return true
+
+    try {
+      const result = await contentApi.unlock(selectedChild.id, content.id)
+      setContents((prev) => prev.map((item) => (
+        item.id === content.id
+          ? { ...item, is_unlocked: true, isUnlocked: true, unlock: result.unlock }
+          : item
+      )))
+      updateStars(result.child_total_stars)
+      return true
+    } catch (err) {
+      if (err.type === 'CONTENT_ALREADY_UNLOCKED') return true
+      setError(err.message || 'Không mở khóa được nội dung học.')
+      return false
+    }
+  }
+
+  const recordSession = async ({ content, isCorrect, selectedEmotion }) => {
+    const unlocked = await ensureUnlocked(content)
+    if (!unlocked) return { starsEarned: 0 }
+
+    try {
+      const now = new Date().toISOString()
+      const result = await contentApi.recordSession(selectedChild.id, {
+        content_id: content.id,
+        idempotency_key: makeSessionKey(content.id),
+        duration_seconds: 30,
+        status: 'COMPLETED',
+        started_at: now,
+        completed_at: now,
+        is_correct: isCorrect,
+        selected_emotion: selectedEmotion,
+        metadata: {
+          source: 'child-learn-page',
+          tab: currentTab,
+        },
+      })
+
+      updateStars(result.child_total_stars)
+      const stars = result.stars_earned || result.session?.stars_earned || 0
+      setEarnedStars((value) => value + stars)
+      setContents((prev) => prev.map((item) => (
+        item.id === content.id
+          ? {
+              ...item,
+              progress: {
+                ...(item.progress || {}),
+                completed_sessions: (item.progress?.completed_sessions || 0) + 1,
+                stars_earned: (item.progress?.stars_earned || 0) + stars,
+              },
+            }
+          : item
+      )))
+      return { starsEarned: stars }
+    } catch (err) {
+      setError(err.message || 'Chưa lưu được tiến độ học.')
+      return { starsEarned: 0 }
+    }
+  }
+
+  const switchTab = (tab) => {
+    setCurrentTab(tab)
+    setCurrentIndex(0)
+    setShowResult(null)
+    setLastOutcome(null)
+    setError('')
+  }
 
   const handleNext = () => {
-    if (currentIndex < lessons[currentLesson].length - 1) {
-      setCurrentIndex(currentIndex + 1)
-    }
+    setCurrentIndex((index) => Math.min(index + 1, tabContents.length - 1))
   }
 
   const handlePrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1)
-    }
+    setCurrentIndex((index) => Math.max(index - 1, 0))
   }
 
-  const handleAnswer = (selectedIndex) => {
-    const correct = selectedIndex === current.correctAnswer
-    if (correct) {
-      setShowResult('correct')
-      setScore(score + 1)
-    } else {
-      setShowResult('incorrect')
-    }
+  const handleCompleteLecture = async () => {
+    if (!current) return
+    const result = await recordSession({
+      content: current,
+      isCorrect: true,
+      selectedEmotion: null,
+    })
+    setLastOutcome({
+      emotion: current.title,
+      explanation: result.starsEarned > 0
+        ? `Backend đã cộng ${result.starsEarned} sao khi hoàn thành bài học.`
+        : 'Bài học đã được ghi nhận. Nội dung này có thể đã nhận thưởng trước đó.',
+    })
+    setShowResult('correct')
+  }
+
+  const handleAnswer = async (selectedEmotion) => {
+    if (!current) return
+    const correctEmotion = normalizeEmotion(current.quiz?.correct_emotion)
+    const selected = normalizeEmotion(selectedEmotion)
+    const isCorrect = selected === correctEmotion
+    const result = await recordSession({
+      content: current,
+      isCorrect,
+      selectedEmotion: selected,
+    })
+    const correctInfo = emotionInfo(correctEmotion)
+    setLastOutcome({
+      emotion: correctInfo.label,
+      explanation: isCorrect
+        ? `Backend đã cộng ${result.starsEarned} sao cho câu trả lời đúng.`
+        : `Đáp án đúng là ${correctInfo.label}.`,
+    })
+    setShowResult(isCorrect ? 'correct' : 'incorrect')
   }
 
   const handleContinueResult = () => {
     setShowResult(null)
-    if (currentIndex < lessons[currentLesson].length - 1) {
-      setCurrentIndex(currentIndex + 1)
+    setLastOutcome(null)
+    if (currentIndex < tabContents.length - 1) {
+      setCurrentIndex((index) => index + 1)
     } else {
-      // Quiz kết thúc
       setCurrentIndex(0)
     }
   }
 
+  if (!selectedChild?.id) {
+    return (
+      <div className="child-lesson">
+        <div className="lesson-card">
+          <h2>Chưa chọn tài khoản trẻ</h2>
+          <p>Hãy quay lại màn chọn người dùng và chọn tài khoản của bé.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="child-lesson">
+        <div className="lesson-card">
+          <p>Đang tải bài học từ backend...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="child-lesson">
-      {/* Show Result Screens */}
       {showResult === 'correct' && (
-        <CorrectAnswer 
-          emotion={current.emotion}
-          score={score}
+        <CorrectAnswer
+          emotion={lastOutcome?.emotion}
+          score={`${earnedStars} ⭐`}
+          title={currentTab === 'LECTURE' ? 'Hoàn thành bài học!' : 'Đúng rồi!'}
+          messages={[
+            lastOutcome?.explanation || 'Tiến độ đã được lưu vào backend.',
+            'Con tiếp tục học bài tiếp theo nhé!',
+          ]}
           onContinue={handleContinueResult}
         />
       )}
-      
+
       {showResult === 'incorrect' && (
-        <IncorrectAnswer 
-          emotion={current.emotion}
+        <IncorrectAnswer
+          emotion={lastOutcome?.emotion}
+          explanation={lastOutcome?.explanation}
+          title="Chưa đúng rồi!"
+          continueLabel="Tiếp tục →"
+          encouragement="Không sao, con đã học thêm được một điều mới."
           onContinue={handleContinueResult}
-          explanation={current.explanation}
         />
       )}
 
-      {/* Lesson Tabs */}
       <div className="lesson-tabs">
-        <button
-          className={`tab ${currentLesson === 'emotions' ? 'active' : ''}`}
-          onClick={() => {
-            setCurrentLesson('emotions')
-            setCurrentIndex(0)
-            setShowResult(null)
-          }}
-        >
-          😊 Nhận diện cảm xúc
+        <button className={`tab ${currentTab === 'LECTURE' ? 'active' : ''}`} onClick={() => switchTab('LECTURE')}>
+          📘 Bài học
         </button>
-        <button
-          className={`tab ${currentLesson === 'expression' ? 'active' : ''}`}
-          onClick={() => {
-            setCurrentLesson('expression')
-            setCurrentIndex(0)
-            setShowResult(null)
-          }}
-        >
-          😌 Biểu đạt cảm xúc
+        <button className={`tab ${currentTab === 'QUIZ' ? 'active' : ''}`} onClick={() => switchTab('QUIZ')}>
+          ✅ Câu hỏi
         </button>
       </div>
 
-      {/* Lesson Card */}
-      <div className="lesson-card">
-        {currentLesson === 'emotions' ? (
-          <>
-            <div className="emotion-card">
-              <div className="emotion-circle" style={{ backgroundColor: current.color }}>
-                <span className="big-emoji">{current.emoji}</span>
-              </div>
-              <h2 className="emotion-title">{current.emotion}</h2>
-              <p className="emotion-description">{current.description}</p>
-              
-              <div className="examples-section">
-                <h4>Ví dụ:</h4>
-                <ul className="examples-list">
-                  {current.examples.map((example, idx) => (
-                    <li key={idx}>🔹 {example}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+      {error && <p className="camera-error">{error}</p>}
 
-            {/* Quiz Section */}
-            <div className="quiz-section">
-              <h3 className="quiz-question">{current.question}</h3>
-              <div className="quiz-options">
-                {current.options.map((option, idx) => (
-                  <button
-                    key={idx}
-                    className="quiz-option-btn"
-                    onClick={() => handleAnswer(idx)}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="expression-card">
-            <div className="expression-icon">{current.emoji}</div>
-            <h2 className="expression-title">{current.title}</h2>
-            <p className="expression-description">{current.description}</p>
-            
-            <div className="tip-section">
-              <p className="tip-label">💡 Mẹo:</p>
-              <p className="tip-text">{current.tip}</p>
-            </div>
-          </div>
-        )}
+      {!current ? (
+        <div className="lesson-card">
+          <h2>Chưa có nội dung {currentTab === 'LECTURE' ? 'bài học' : 'câu hỏi'} từ backend</h2>
+          <p>Hãy tạo nội dung trong trang Admin hoặc chạy lại seed database.</p>
+        </div>
+      ) : (
+        <div className="lesson-card">
+          {currentTab === 'LECTURE' ? (
+            <LectureContent content={current} onComplete={handleCompleteLecture} />
+          ) : (
+            <QuizContent content={current} onAnswer={handleAnswer} />
+          )}
 
-        {/* Navigation */}
-        {currentLesson === 'expression' && (
           <div className="lesson-navigation">
-            <button
-              className="nav-btn"
-              onClick={handlePrev}
-              disabled={currentIndex === 0}
-            >
-              ← Trước
-            </button>
-            
+            <button className="nav-btn" onClick={handlePrev} disabled={currentIndex === 0}>← Trước</button>
+
             <div className="progress">
-              <span className="progress-text">
-                {currentIndex + 1} / {lessons[currentLesson].length}
-              </span>
+              <span className="progress-text">{currentIndex + 1} / {tabContents.length}</span>
               <div className="progress-bar">
-                <div
-                  className="progress-fill"
-                  style={{
-                    width: `${((currentIndex + 1) / lessons[currentLesson].length) * 100}%`
-                  }}
-                ></div>
+                <div className="progress-fill" style={{ width: `${((currentIndex + 1) / tabContents.length) * 100}%` }}></div>
               </div>
             </div>
 
-            <button
-              className="nav-btn"
-              onClick={handleNext}
-              disabled={currentIndex === lessons[currentLesson].length - 1}
-            >
-              Tiếp →
-            </button>
+            <button className="nav-btn" onClick={handleNext} disabled={currentIndex === tabContents.length - 1}>Tiếp →</button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Back Button */}
       <button className="back-to-home" onClick={() => navigate('/child/home')}>
         ← Quay lại
       </button>
     </div>
+  )
+}
+
+function LectureContent({ content, onComplete }) {
+  const media = getContentMedia(content)
+  const description = getContentDescription(content)
+  const progress = content.progress
+
+  return (
+    <div className="emotion-card">
+      <div className="emotion-circle" style={{ backgroundColor: '#e3f2fd' }}>
+        <span className="big-emoji">{media}</span>
+      </div>
+      <h2 className="emotion-title">{content.title}</h2>
+      <p className="emotion-description">{description}</p>
+
+      <div className="examples-section">
+        <h4>Tiến độ backend:</h4>
+        <ul className="examples-list">
+          <li>⭐ Sao đã nhận: {progress?.stars_earned || 0}</li>
+          <li>✅ Số lần hoàn thành: {progress?.completed_sessions || 0}</li>
+        </ul>
+      </div>
+
+      <button className="learn-complete-btn" onClick={onComplete}>
+        Hoàn thành bài học
+      </button>
+    </div>
+  )
+}
+
+function QuizContent({ content, onAnswer }) {
+  const quiz = content.quiz || {}
+  const answers = quiz.answer_emotions || []
+  const question = quiz.description || content.title
+
+  return (
+    <>
+      <div className="emotion-card">
+        <div className="emotion-circle" style={{ backgroundColor: '#f5f5f5' }}>
+          <span className="big-emoji">{quiz.media_url || '❓'}</span>
+        </div>
+        <h2 className="emotion-title">{content.title}</h2>
+        <p className="emotion-description">Chọn câu trả lời đúng để backend ghi nhận điểm sao.</p>
+      </div>
+
+      <div className="quiz-section">
+        <h3 className="quiz-question">{question}</h3>
+        <div className="quiz-options">
+          {answers.map((answer) => {
+            const info = emotionInfo(answer)
+            return (
+              <button key={answer} className="quiz-option-btn" onClick={() => onAnswer(answer)}>
+                {info.emoji} {info.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </>
   )
 }

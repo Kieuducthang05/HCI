@@ -1,0 +1,41 @@
+services:
+
+  # ── 1. Chatbot API (Bạn thỏ) ─────────────────────────────────────────────
+  chatbot:
+    build: ./chatbot
+    ports:
+      - "8080:8000"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - DEBUG=${DEBUG:-false}
+      - CHILD_NAME=${CHILD_NAME:-Minh}
+      - CHILD_AGE=${CHILD_AGE:-8}
+      - CHILD_INTERESTS=${CHILD_INTERESTS:-khủng long,tàu hỏa,màu xanh}
+      - CHILD_COMM_LEVEL=${CHILD_COMM_LEVEL:-cơ bản}
+      - LLM1_MODEL=${LLM1_MODEL:-llama-3.1-8b-instant}
+      - LLM2_MODEL=${LLM2_MODEL:-llama-3.1-8b-instant}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5).read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── 2. Model Server (MiniEmotionNet) ──────────────────────────────────────
+  model-server:
+    build: ./model-server
+    ports:
+      - "8001:9000"
+    volumes:
+      - ./weights:/app/weights:ro
+    environment:
+      - MODEL_PATH=${MODEL_PATH:-/app/weights/child_best.pt}
+      - NUM_CLASSES=${NUM_CLASSES:-5}
+      - EMOTION_LABELS=${EMOTION_LABELS:-happy,sad,angry,fear,neutral}
+      - DROPOUT=${DROPOUT:-0.35}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/health', timeout=5).read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

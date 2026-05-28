@@ -17,6 +17,7 @@ import ChildChat from './pages/ChildChat'
 import ChildEmotion from './pages/ChildEmotion'
 import ChildAvatar from './pages/ChildAvatar'
 import ChildInventory from './pages/ChildInventory'
+import AdminDashboard from './pages/AdminDashboard'
 import './App.css'
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/select-user" element={<SelectUser />} />
+        <Route path="/admin" element={<AdminDashboard />} />
 
         {/* Parent Routes */}
         <Route path="/parent" element={<ParentLayout />}>

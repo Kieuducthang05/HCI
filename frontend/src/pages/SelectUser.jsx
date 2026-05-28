@@ -16,6 +16,11 @@ export default function SelectUser() {
       return
     }
 
+    if (session.user?.role === 'ADMIN') {
+      navigate('/admin', { replace: true })
+      return
+    }
+
     let mounted = true
     childrenApi.list()
       .then((result) => {
