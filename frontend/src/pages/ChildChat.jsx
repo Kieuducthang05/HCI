@@ -27,13 +27,28 @@ function formatParentAlertReason(alert) {
   return [severity, reason, childMessage].filter(Boolean).join(' | ').slice(0, 1000)
 }
 
+function buildChildProfile(child) {
+  if (!child) return null
+
+  const currentYear = new Date().getFullYear()
+  const birthYear = Number(child.birth_year)
+  const age = Number.isInteger(birthYear) && birthYear > 1900 ? currentYear - birthYear : undefined
+
+  return {
+    name: child.nickname || child.name || 'Bé',
+    age,
+  }
+}
+
 export default function ChildChat() {
   const navigate = useNavigate()
+  const selectedChild = getSelectedChild()
+  const childName = selectedChild?.nickname || selectedChild?.name || 'em'
   const [messages, setMessages] = useState([
     {
       id: 1,
       sender: 'thỏ',
-      text: 'Xin chào! 😊 Em tên là Thỏ, em là trợ lý ảo của em. Hôm nay em muốn nói chuyện với em về điều gì?',
+      text: `Xin chào ${childName}! 😊 Mình là Thỏ. Hôm nay ${childName} muốn nói chuyện với Thỏ về điều gì?`,
       timestamp: new Date()
     }
   ])
@@ -78,6 +93,7 @@ export default function ChildChat() {
         message: userText,
         history: chatHistory,
         conversationSummary,
+        childProfile: buildChildProfile(selectedChild),
       })
 
       const bunnyResponse = {
@@ -102,7 +118,6 @@ export default function ChildChat() {
       })
 
       if (result.parent_alert?.reason) {
-        const selectedChild = getSelectedChild()
         const alertReason = formatParentAlertReason(result.parent_alert)
         if (selectedChild?.id) {
           trackingApi.createAlert(selectedChild.id, alertReason).catch((error) => {

@@ -129,12 +129,13 @@ export async function chatbotRequest(path, options = {}) {
 
 export const chatbotApi = {
   health: () => chatbotRequest('/health'),
-  chat: ({ message, history = [], conversationSummary = '' }) => chatbotRequest('/chat', {
+  chat: ({ message, history = [], conversationSummary = '', childProfile = null }) => chatbotRequest('/chat', {
     method: 'POST',
     body: {
       message,
       history,
       conversation_summary: conversationSummary,
+      child_profile: childProfile,
     },
   }),
 }

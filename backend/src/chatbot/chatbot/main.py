@@ -118,10 +118,17 @@ class Turn(BaseModel):
     user: str
     assistant: str
 
+class ChildProfileInput(BaseModel):
+    name: Optional[str] = None
+    age: Optional[int] = None
+    interests: Optional[list[str]] = None
+    communication_level: Optional[str] = None
+
 class ChatRequest(BaseModel):
     message: str
     history: list[Turn] = []
     conversation_summary: str = ""
+    child_profile: Optional[ChildProfileInput] = None
 
 class FilterResult(BaseModel):
     status: bool
@@ -163,8 +170,31 @@ def llm1_filter(client: Groq, text: str, context: str = "input") -> dict:
         return {"status": False, "reason": "Không phân tích được", "severity": "low"}
 
 
-def build_chat_system_prompt(conversation_summary: str) -> str:
-    child = CHILD_PROFILE
+def resolve_child_profile(child_profile: Optional[ChildProfileInput]) -> dict:
+    child = dict(CHILD_PROFILE)
+
+    if child_profile is None:
+        return child
+
+    if child_profile.name and child_profile.name.strip():
+        child["name"] = child_profile.name.strip()
+
+    if child_profile.age and 0 < child_profile.age < 30:
+        child["age"] = child_profile.age
+
+    if child_profile.interests:
+        interests = [value.strip() for value in child_profile.interests if value and value.strip()]
+        if interests:
+            child["interests"] = interests[:10]
+
+    if child_profile.communication_level and child_profile.communication_level.strip():
+        child["communication_level"] = child_profile.communication_level.strip()
+
+    return child
+
+
+def build_chat_system_prompt(conversation_summary: str, child_profile: Optional[ChildProfileInput] = None) -> str:
+    child = resolve_child_profile(child_profile)
     companion = COMPANION_PROFILE
     return f"""Bạn là {companion['name']}, {companion['personality']}, là một trợ lý AI của ứng dụng hỗ trợ trẻ tự kỷ nhận biết cảm xúc.
 
@@ -175,6 +205,8 @@ THÔNG TIN VỀ BÉ:
 - Mức độ giao tiếp: {child['communication_level']}
 
 HƯỚNG DẪN GIAO TIẾP:
+- Luôn gọi bé bằng đúng tên trong phần THÔNG TIN VỀ BÉ, không dùng tên mặc định nếu request đã gửi tên khác
+- Nếu bé hỏi "tên con là gì" hoặc hỏi về tên của bé, hãy trả lời bằng đúng tên trong phần THÔNG TIN VỀ BÉ
 - Dùng câu ngắn, tối đa 2-3 câu mỗi lượt
 - Từ ngữ đơn giản, dễ hiểu
 - Khen ngợi và động viên thường xuyên
@@ -185,8 +217,14 @@ TÓM TẮT CUỘC HỘI THOẠI TRƯỚC:
 {conversation_summary if conversation_summary else "Đây là cuộc hội thoại đầu tiên."}"""
 
 
-def llm2_chat(client: Groq, user_message: str, history: list[Turn], conversation_summary: str) -> str:
-    messages = [{"role": "system", "content": build_chat_system_prompt(conversation_summary)}]
+def llm2_chat(
+    client: Groq,
+    user_message: str,
+    history: list[Turn],
+    conversation_summary: str,
+    child_profile: Optional[ChildProfileInput] = None,
+) -> str:
+    messages = [{"role": "system", "content": build_chat_system_prompt(conversation_summary, child_profile)}]
     for turn in history[-MAX_HISTORY_TURNS:]:
         messages.append({"role": "user", "content": turn.user})
         messages.append({"role": "assistant", "content": turn.assistant})
@@ -245,12 +283,12 @@ def chat(req: ChatRequest):
         }
 
     # 2. Generate reply
-    reply = llm2_chat(client, req.message, req.history, req.conversation_summary)
+    reply = llm2_chat(client, req.message, req.history, req.conversation_summary, req.child_profile)
 
     # 3. Filter output
     output_filter = llm1_filter(client, reply, context="output")
     output_replaced = False
-    if output_filter.get("status"):
+    if output_filter.get("status") and output_filter.get("severity") in {"medium", "high"}:
         reply = random.choice(SAFE_FALLBACK_RESPONSES)
         output_replaced = True
 
