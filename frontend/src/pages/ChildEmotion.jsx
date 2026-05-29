@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getSelectedChild, trackingApi } from '../services/api'
+import { emotionModelApi, getSelectedChild, trackingApi } from '../services/api'
 import '../styles/Child.css'
 
 const emotions = [
@@ -53,6 +53,78 @@ const regulationSteps = [
   'Thở ra thật chậm trong 6 nhịp.'
 ]
 
+const modelEmotionMap = {
+  happy: {
+    uiId: 'happy',
+    backendValue: 'happy',
+    label: 'Vui',
+    icon: '😊',
+  },
+  sad: {
+    uiId: 'sad',
+    backendValue: 'sad',
+    label: 'Buồn',
+    icon: '😢',
+  },
+  angry: {
+    uiId: 'angry',
+    backendValue: 'angry',
+    label: 'Tức giận',
+    icon: '😠',
+  },
+  fear: {
+    uiId: 'scared',
+    backendValue: 'fear',
+    label: 'Sợ',
+    icon: '😟',
+  },
+  neutral: {
+    uiId: 'calm',
+    backendValue: 'neutral',
+    label: 'Trung tính',
+    icon: '😌',
+  },
+}
+
+function getModelEmotionInfo(value) {
+  const key = String(value || '').trim().toLowerCase()
+  return modelEmotionMap[key] || {
+    uiId: 'calm',
+    backendValue: key || 'neutral',
+    label: value || 'Không xác định',
+    icon: '🙂',
+  }
+}
+
+function captureVideoFrame(video) {
+  return new Promise((resolve, reject) => {
+    if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+      reject(new Error('Camera chưa sẵn sàng để chụp ảnh.'))
+      return
+    }
+
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const context = canvas.getContext('2d')
+
+    if (!context) {
+      reject(new Error('Trình duyệt không hỗ trợ chụp ảnh từ camera.'))
+      return
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error('Không tạo được ảnh từ camera.'))
+        return
+      }
+
+      resolve(new File([blob], `camera-frame-${Date.now()}.jpg`, { type: 'image/jpeg' }))
+    }, 'image/jpeg', 0.9)
+  })
+}
+
 export default function ChildEmotion() {
   const navigate = useNavigate()
   const videoRef = useRef(null)
@@ -61,6 +133,7 @@ export default function ChildEmotion() {
   const [isCameraOn, setIsCameraOn] = useState(false)
   const [cameraError, setCameraError] = useState('')
   const [scanResult, setScanResult] = useState(null)
+  const [isScanning, setIsScanning] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const [saveMessage, setSaveMessage] = useState('')
 
@@ -92,15 +165,31 @@ export default function ChildEmotion() {
     setScanResult(null)
     setSaveMessage('')
 
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Trình duyệt hiện tại không hỗ trợ mở camera.')
+      return
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
+        await videoRef.current.play()
       }
       setIsCameraOn(true)
-    } catch {
-      setCameraError('Không mở được camera. Hãy kiểm tra quyền truy cập camera của trình duyệt.')
+    } catch (error) {
+      let message = 'Không mở được camera. Hãy kiểm tra quyền truy cập camera của trình duyệt.'
+
+      if (error?.name === 'NotAllowedError') {
+        message = 'Trình duyệt đang chặn quyền camera. Hãy cho phép quyền camera cho localhost rồi thử lại.'
+      } else if (error?.name === 'NotFoundError') {
+        message = 'Không tìm thấy webcam trên thiết bị.'
+      } else if (error?.name === 'NotReadableError') {
+        message = 'Webcam đang được ứng dụng khác sử dụng. Hãy tắt ứng dụng đó rồi thử lại.'
+      }
+
+      setCameraError(message)
     }
   }
 
@@ -113,39 +202,62 @@ export default function ChildEmotion() {
     setIsCameraOn(false)
   }
 
-  const scanExpression = () => {
+  const scanExpression = async () => {
     if (!isCameraOn) {
       setCameraError('Bật camera trước khi kiểm tra biểu cảm.')
       return
     }
 
-    const confidence = 82 + Math.floor(Math.random() * 14)
-    const result = {
-      icon: selectedEmotion.icon,
-      confidence,
-      message: `Biểu cảm của con đang gần với cảm xúc "${selectedEmotion.label}".`
-    }
-    setScanResult(result)
+    setCameraError('')
+    setSaveMessage('')
+    setIsScanning(true)
 
-    const child = getSelectedChild()
-    if (!child?.id) {
-      setSaveMessage('Chưa chọn tài khoản trẻ nên chưa lưu nhật ký.')
-      return
-    }
+    try {
+      const frame = await captureVideoFrame(videoRef.current)
+      const prediction = await emotionModelApi.predict(frame)
+      const detectedEmotion = getModelEmotionInfo(prediction.emotion)
+      const confidence = Number(prediction.confidence || 0)
+      const matchedEmotion = emotions.find((emotion) => emotion.id === detectedEmotion.uiId)
 
-    trackingApi.recordEmotionLog(child.id, {
-      emotion_value: selectedEmotion.id,
-      trigger_source: 'WEBCAM',
-      ai_emotion_label: selectedEmotion.id,
-      ai_confidence: confidence / 100,
-      confidence_score: confidence / 100,
-      metadata: {
-        source: 'child-emotion-page',
-        simulated: true,
-      },
-    })
-      .then(() => setSaveMessage('Đã lưu cảm xúc vào nhật ký.'))
-      .catch(() => setSaveMessage('Chưa lưu được nhật ký. Hãy kiểm tra kết nối backend.'))
+      if (matchedEmotion) {
+        setSelectedEmotion(matchedEmotion)
+      }
+
+      setScanResult({
+        icon: detectedEmotion.icon,
+        confidence,
+        scores: prediction.all_scores || {},
+        message: `Mô hình dự đoán con đang gần với cảm xúc "${detectedEmotion.label}".`
+      })
+
+      const child = getSelectedChild()
+      if (!child?.id) {
+        setSaveMessage('Chưa chọn tài khoản trẻ nên chưa lưu nhật ký.')
+        return
+      }
+
+      trackingApi.recordEmotionLog(child.id, {
+        emotion_value: detectedEmotion.backendValue,
+        trigger_source: 'WEBCAM',
+        ai_emotion_label: prediction.emotion,
+        ai_confidence: confidence,
+        confidence_score: confidence,
+        ai_scores: prediction.all_scores || undefined,
+        ai_result: prediction,
+        metadata: {
+          source: 'child-emotion-page',
+          simulated: false,
+          frame_uploaded_to_model: true,
+          frame_persisted: false,
+        },
+      })
+        .then(() => setSaveMessage('Đã lưu kết quả cảm xúc vào nhật ký.'))
+        .catch(() => setSaveMessage('Đã dự đoán xong nhưng chưa lưu được nhật ký. Hãy kiểm tra backend.'))
+    } catch (error) {
+      setCameraError(error.message || 'Không gửi được ảnh đến mô hình cảm xúc.')
+    } finally {
+      setIsScanning(false)
+    }
   }
 
   return (
@@ -193,9 +305,14 @@ export default function ChildEmotion() {
 
         <div className="camera-panel">
           <div className="camera-preview">
-            {isCameraOn ? (
-              <video ref={videoRef} autoPlay playsInline muted />
-            ) : (
+            <video
+              ref={videoRef}
+              className={isCameraOn ? '' : 'camera-video-hidden'}
+              autoPlay
+              playsInline
+              muted
+            />
+            {!isCameraOn && (
               <div className="camera-placeholder">
                 <span>📷</span>
                 <p>Camera đang tắt</p>
@@ -207,8 +324,8 @@ export default function ChildEmotion() {
             <button className="tool-btn primary" onClick={isCameraOn ? stopCamera : startCamera}>
               {isCameraOn ? 'Tắt camera' : 'Bật camera'}
             </button>
-            <button className="tool-btn" onClick={scanExpression}>
-              Kiểm tra biểu cảm
+            <button className="tool-btn" onClick={scanExpression} disabled={!isCameraOn || isScanning}>
+              {isScanning ? 'Đang gửi ảnh...' : 'Kiểm tra biểu cảm'}
             </button>
           </div>
 
@@ -218,7 +335,14 @@ export default function ChildEmotion() {
               <span>{scanResult.icon}</span>
               <div>
                 <strong>{scanResult.message}</strong>
-                <p>Độ tin cậy mô phỏng: {scanResult.confidence}%</p>
+                <p>Độ tin cậy: {Math.round(scanResult.confidence * 100)}%</p>
+                {Object.keys(scanResult.scores || {}).length > 0 && (
+                  <p>
+                    Điểm mô hình: {Object.entries(scanResult.scores)
+                      .map(([emotion, score]) => `${getModelEmotionInfo(emotion).label} ${Math.round(Number(score) * 100)}%`)
+                      .join(' · ')}
+                  </p>
+                )}
                 {saveMessage && <p>{saveMessage}</p>}
               </div>
             </div>

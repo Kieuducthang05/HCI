@@ -1434,6 +1434,10 @@ body.dark-mode {
   object-fit: cover;
 }
 
+.camera-preview video.camera-video-hidden {
+  display: none;
+}
+
 .camera-placeholder {
   color: white;
   text-align: center;
