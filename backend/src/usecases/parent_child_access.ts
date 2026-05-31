@@ -21,6 +21,7 @@ export type OwnedChild = {
   avatarUrl: string | null;
   birthYear: number;
   totalStars: number;
+  webcamConsent: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -91,6 +92,7 @@ export async function requireOwnedActiveParentChild(input: {
     avatarUrl: child.avatarUrl ?? null,
     birthYear: child.birthYear,
     totalStars: child.totalStars,
+    webcamConsent: !!child.webcamConsent,
     createdAt: child.createdAt,
     updatedAt: child.updatedAt,
   };

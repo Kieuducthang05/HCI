@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { emotionModelApi, getSelectedChild, trackingApi } from '../services/api'
+import { getSelectedChild, trackingApi } from '../services/api'
 import '../styles/Child.css'
 
 const emotions = [
@@ -213,8 +213,15 @@ export default function ChildEmotion() {
     setIsScanning(true)
 
     try {
+      const child = getSelectedChild()
+      if (!child?.id) {
+        setSaveMessage('Chưa chọn tài khoản trẻ nên chưa thể dự đoán cảm xúc.')
+        return
+      }
+
       const frame = await captureVideoFrame(videoRef.current)
-      const prediction = await emotionModelApi.predict(frame)
+      const result = await trackingApi.predictEmotion(child.id, frame)
+      const prediction = result.prediction
       const detectedEmotion = getModelEmotionInfo(prediction.emotion)
       const confidence = Number(prediction.confidence || 0)
       const matchedEmotion = emotions.find((emotion) => emotion.id === detectedEmotion.uiId)
@@ -230,29 +237,7 @@ export default function ChildEmotion() {
         message: `Mô hình dự đoán con đang gần với cảm xúc "${detectedEmotion.label}".`
       })
 
-      const child = getSelectedChild()
-      if (!child?.id) {
-        setSaveMessage('Chưa chọn tài khoản trẻ nên chưa lưu nhật ký.')
-        return
-      }
-
-      trackingApi.recordEmotionLog(child.id, {
-        emotion_value: detectedEmotion.backendValue,
-        trigger_source: 'WEBCAM',
-        ai_emotion_label: prediction.emotion,
-        ai_confidence: confidence,
-        confidence_score: confidence,
-        ai_scores: prediction.all_scores || undefined,
-        ai_result: prediction,
-        metadata: {
-          source: 'child-emotion-page',
-          simulated: false,
-          frame_uploaded_to_model: true,
-          frame_persisted: false,
-        },
-      })
-        .then(() => setSaveMessage('Đã lưu kết quả cảm xúc vào nhật ký.'))
-        .catch(() => setSaveMessage('Đã dự đoán xong nhưng chưa lưu được nhật ký. Hãy kiểm tra backend.'))
+      setSaveMessage(result.log ? 'Đã dự đoán và lưu kết quả cảm xúc vào nhật ký.' : '')
     } catch (error) {
       setCameraError(error.message || 'Không gửi được ảnh đến mô hình cảm xúc.')
     } finally {

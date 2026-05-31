@@ -5,6 +5,7 @@ import { createChatbotAlert } from "../usecases/tracking/create_chatbot_alert.ts
 import { listEmotionLogs } from "../usecases/tracking/list_emotion_logs.ts";
 import { listChildAlerts } from "../usecases/tracking/list_child_alerts.ts";
 import { recordEmotionLog } from "../usecases/tracking/log_emotion.ts";
+import { predictEmotionFromImage } from "../usecases/tracking/predict_emotion_from_image.ts";
 import { withApiErrorHandler } from "./api_error_handler.ts";
 import { requireAuth } from "./middleware/require_auth.ts";
 
@@ -40,6 +41,34 @@ function formatChatbotAlert(alert: {
   };
 }
 
+function formatEmotionLog(log: {
+  id: string;
+  childId: string;
+  emotionValue: string;
+  triggerSource: string;
+  durationSeconds: number | null;
+  confidenceScore: number | null;
+  aiEmotionLabel: string | null;
+  aiConfidence: number | null;
+  aiScores: unknown;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}) {
+  return {
+    id: log.id,
+    child_id: log.childId,
+    emotion_value: log.emotionValue,
+    trigger_source: log.triggerSource,
+    duration_seconds: log.durationSeconds,
+    confidence_score: log.confidenceScore,
+    ai_emotion_label: log.aiEmotionLabel,
+    ai_confidence: log.aiConfidence,
+    ai_scores: log.aiScores,
+    metadata: log.metadata,
+    created_at: log.createdAt,
+  };
+}
+
 const protectedTrackingRouter = new Elysia()
   .use(requireAuth)
   .post(
@@ -62,19 +91,7 @@ const protectedTrackingRouter = new Elysia()
       set.status = 201;
       return {
         message: "Emotion log recorded successfully.",
-        log: {
-          id: log.id,
-          child_id: log.childId,
-          emotion_value: log.emotionValue,
-          trigger_source: log.triggerSource,
-          duration_seconds: log.durationSeconds,
-          confidence_score: log.confidenceScore,
-          ai_emotion_label: log.aiEmotionLabel,
-          ai_confidence: log.aiConfidence,
-          ai_scores: log.aiScores,
-          metadata: log.metadata,
-          created_at: log.createdAt,
-        },
+        log: formatEmotionLog(log),
       };
     },
     {
@@ -94,6 +111,37 @@ const protectedTrackingRouter = new Elysia()
       }),
     },
   )
+  .post(
+    "/children/:childId/emotion-predictions",
+    async ({ authUserId, params, body, set }) => {
+      const result = await predictEmotionFromImage({
+        parentId: authUserId,
+        childId: params.childId,
+        file: body.file,
+      });
+
+      set.status = 201;
+      return {
+        message: "Emotion prediction completed successfully.",
+        prediction: {
+          emotion: result.prediction.emotion,
+          internal_emotion: result.prediction.internalEmotion,
+          confidence: result.prediction.confidence,
+          all_scores: result.prediction.allScores,
+        },
+        log: formatEmotionLog(result.log),
+      };
+    },
+    {
+      parse: "formdata",
+      params: t.Object({
+        childId: t.String(),
+      }),
+      body: t.Object({
+        file: t.File(),
+      }),
+    },
+  )
   .get(
     "/children/:childId/emotion-logs",
     async ({ authUserId, params, query, set }) => {
@@ -110,19 +158,7 @@ const protectedTrackingRouter = new Elysia()
 
       set.status = 200;
       return {
-        logs: result.logs.map((log) => ({
-          id: log.id,
-          child_id: log.childId,
-          emotion_value: log.emotionValue,
-          trigger_source: log.triggerSource,
-          duration_seconds: log.durationSeconds,
-          confidence_score: log.confidenceScore,
-          ai_emotion_label: log.aiEmotionLabel,
-          ai_confidence: log.aiConfidence,
-          ai_scores: log.aiScores,
-          metadata: log.metadata,
-          created_at: log.createdAt,
-        })),
+        logs: result.logs.map(formatEmotionLog),
         next_cursor: result.nextCursor,
       };
     },

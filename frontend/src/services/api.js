@@ -1,6 +1,5 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050').replace(/\/$/, '')
 const CHATBOT_BASE_URL = (import.meta.env.VITE_CHATBOT_BASE_URL || 'http://localhost:8080').replace(/\/$/, '')
-const EMOTION_MODEL_BASE_URL = (import.meta.env.VITE_EMOTION_MODEL_BASE_URL || 'http://localhost:8001').replace(/\/$/, '')
 
 const SESSION_KEY = 'hci.session'
 const SELECTED_CHILD_KEY = 'hci.selectedChild'
@@ -141,30 +140,6 @@ export const chatbotApi = {
   }),
 }
 
-export async function emotionModelRequest(path, options = {}) {
-  const response = await fetch(`${EMOTION_MODEL_BASE_URL}${path}`, options)
-  const data = await parseResponse(response)
-
-  if (!response.ok) {
-    throw new ApiError(data?.detail || 'Không thể kết nối mô hình cảm xúc.', response.status)
-  }
-
-  return data
-}
-
-export const emotionModelApi = {
-  health: () => emotionModelRequest('/health'),
-  predict: (file) => {
-    const formData = new FormData()
-    formData.append('file', file, file.name || 'camera-frame.jpg')
-
-    return emotionModelRequest('/model/predict', {
-      method: 'POST',
-      body: formData,
-    })
-  },
-}
-
 export const authApi = {
   signIn: (payload) => apiRequest('/auth/signin', { method: 'POST', body: payload, auth: false }),
   signUp: (payload) => apiRequest('/auth/signup', { method: 'POST', body: payload, auth: false }),
@@ -233,6 +208,15 @@ export const preferencesApi = {
 export const trackingApi = {
   dashboard: (childId, days = 7) => apiRequest(`/children/${childId}/dashboard`, { query: { days } }),
   listEmotionLogs: (childId, query) => apiRequest(`/children/${childId}/emotion-logs`, { query }),
+  predictEmotion: (childId, file) => {
+    const formData = new FormData()
+    formData.append('file', file, file.name || 'camera-frame.jpg')
+
+    return apiRequest(`/children/${childId}/emotion-predictions`, {
+      method: 'POST',
+      body: formData,
+    })
+  },
   recordEmotionLog: (childId, payload) => apiRequest(`/children/${childId}/emotion-logs`, {
     method: 'POST',
     body: payload,
