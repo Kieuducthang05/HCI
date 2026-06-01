@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import ToastNotification from '../components/ToastNotification'
-import { authApi, childrenApi, preferencesApi, getSession, setSession, setSelectedChild } from '../services/api'
+import {
+  authApi,
+  childrenApi,
+  preferencesApi,
+  getSelectedChild,
+  getSession,
+  setSession,
+  setSelectedChild,
+} from '../services/api'
 import '../styles/ParentSettings.css'
 
 const defaultParentInfo = {
@@ -36,6 +44,9 @@ export default function ParentSettings() {
   const [children, setChildren] = useState([])
   const [newChildName, setNewChildName] = useState('')
   const [newChildBirthYear, setNewChildBirthYear] = useState(new Date().getFullYear() - 7)
+  const [newChildAvatar, setNewChildAvatar] = useState(null)
+  const [newChildAvatarPreview, setNewChildAvatarPreview] = useState('')
+  const [avatarUploadingId, setAvatarUploadingId] = useState('')
 
   const [regulationConfig, setRegulationConfig] = useState({
     method: 'breathing',
@@ -49,6 +60,11 @@ export default function ParentSettings() {
     const timer = setTimeout(() => setToast(null), 3200)
     return () => clearTimeout(timer)
   }, [toast])
+
+  useEffect(() => {
+    if (!newChildAvatarPreview) return undefined
+    return () => URL.revokeObjectURL(newChildAvatarPreview)
+  }, [newChildAvatarPreview])
 
   useEffect(() => {
     let mounted = true
@@ -212,6 +228,87 @@ export default function ParentSettings() {
     }
   }
 
+  const validateAvatarFile = (file) => {
+    if (!file) return false
+
+    if (!file.type.startsWith('image/')) {
+      setToast({
+        type: 'error',
+        title: 'Ảnh đại diện chưa hợp lệ',
+        message: 'Vui lòng chọn file ảnh cho avatar của bé.',
+      })
+      return false
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setToast({
+        type: 'error',
+        title: 'Ảnh quá lớn',
+        message: 'Avatar cần nhỏ hơn hoặc bằng 5MB.',
+      })
+      return false
+    }
+
+    return true
+  }
+
+  const handleNewChildAvatarChange = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!validateAvatarFile(file)) {
+      event.target.value = ''
+      return
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    setNewChildAvatar(file)
+    setNewChildAvatarPreview(previewUrl)
+  }
+
+  const clearNewChildAvatar = () => {
+    setNewChildAvatar(null)
+    setNewChildAvatarPreview('')
+  }
+
+  const handleUpdateChildAvatar = async (child, event) => {
+    const input = event.target
+    const file = input.files?.[0]
+    if (!file) return
+
+    if (!validateAvatarFile(file)) {
+      input.value = ''
+      return
+    }
+
+    try {
+      setAvatarUploadingId(child.id)
+      const result = await childrenApi.update(child.id, { avatar: file })
+      const updatedChild = formatChild(result.child)
+      setChildren((prev) => prev.map((item) => (item.id === child.id ? updatedChild : item)))
+
+      const selectedChild = getSelectedChild()
+      if (selectedChild?.id === child.id) {
+        setSelectedChild(updatedChild)
+      }
+
+      setToast({
+        type: 'success',
+        title: 'Đã cập nhật avatar',
+        message: `Ảnh đại diện của ${child.name} đã được lưu.`,
+      })
+    } catch (err) {
+      setToast({
+        type: 'error',
+        title: 'Không thể cập nhật avatar',
+        message: err.message || 'Vui lòng thử lại.',
+      })
+    } finally {
+      setAvatarUploadingId('')
+      input.value = ''
+    }
+  }
+
   const handleAddChild = async () => {
     const trimmedName = newChildName.trim()
     const birthYear = Number(newChildBirthYear)
@@ -238,12 +335,14 @@ export default function ParentSettings() {
       const result = await childrenApi.create({
         nickname: trimmedName,
         birthYear,
+        avatar: newChildAvatar || undefined,
         webcamConsent: true,
       })
       const child = formatChild(result.child)
       setChildren((prev) => [...prev, child])
       setSelectedChild(child)
       setNewChildName('')
+      clearNewChildAvatar()
       setToast({
         type: 'success',
         title: 'Đã tạo tài khoản',
@@ -413,6 +512,14 @@ export default function ParentSettings() {
         <div className="section-header">
           <h2 className="section-title">Tài khoản của các bé</h2>
           <div className="new-child-form">
+            <label className="child-avatar-picker" aria-label="Chọn ảnh đại diện cho bé">
+              {newChildAvatarPreview ? (
+                <img src={newChildAvatarPreview} alt="Ảnh đại diện mới" />
+              ) : (
+                <span>🧒</span>
+              )}
+              <input type="file" accept="image/*" onChange={handleNewChildAvatarChange} />
+            </label>
             <input
               type="text"
               value={newChildName}
@@ -430,6 +537,11 @@ export default function ParentSettings() {
               max={new Date().getFullYear()}
             />
             <button className="btn btn-primary" onClick={handleAddChild}>👶 Tạo mới</button>
+            {newChildAvatar && (
+              <button type="button" className="btn btn-secondary" onClick={clearNewChildAvatar}>
+                Bỏ ảnh
+              </button>
+            )}
           </div>
         </div>
 
@@ -438,11 +550,22 @@ export default function ParentSettings() {
             <div key={child.id} className="child-account-item">
               <div className="child-avatar-area">
                 {child.avatar_url ? (
-                  <img className="child-avatar" src={child.avatar_url} alt={child.name} />
+                  <img className="child-avatar child-avatar-image" src={child.avatar_url} alt={child.name} />
                 ) : (
                   <div className="child-avatar">{child.avatar}</div>
                 )}
-                <span className="child-name">{child.name}</span>
+                <div className="child-identity">
+                  <span className="child-name">{child.name}</span>
+                  <label className={`child-avatar-upload ${avatarUploadingId === child.id ? 'disabled' : ''}`}>
+                    {avatarUploadingId === child.id ? 'Đang tải...' : 'Đổi ảnh'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={avatarUploadingId === child.id}
+                      onChange={(event) => handleUpdateChildAvatar(child, event)}
+                    />
+                  </label>
+                </div>
               </div>
 
               <div className="child-stats">

@@ -10,6 +10,7 @@ import {
 import { unlockChildContent } from "../usecases/content/unlock_child_content.ts";
 import type { ContentResult } from "../usecases/content/content_models.ts";
 import { AppError } from "../usecases/app_error.ts";
+import { getFileUrl } from "../storage/s3.ts";
 import { withApiErrorHandler } from "./api_error_handler.ts";
 import { requireAuth } from "./middleware/require_auth.ts";
 
@@ -32,7 +33,20 @@ function parseOptionalBoolean(rawValue: string | undefined): boolean | undefined
   );
 }
 
-function formatContent(content: ContentResult) {
+function isUploadedMediaKey(value: string | null): value is string {
+  return Boolean(value && value.startsWith("media-assets/"));
+}
+
+async function resolveMediaUrl(value: string | null): Promise<string | null> {
+  if (!isUploadedMediaKey(value)) return value;
+  return await getFileUrl(value, 3600);
+}
+
+async function formatContent(content: ContentResult) {
+  const lectureMediaUrl = await resolveMediaUrl(content.lecture?.mediaUrl ?? null);
+  const quizMediaUrl = await resolveMediaUrl(content.quiz?.mediaUrl ?? null);
+  const gamePromptAssetUrl = await resolveMediaUrl(content.game?.promptAssetUrl ?? null);
+
   return {
     id: content.id,
     title: content.title,
@@ -61,7 +75,7 @@ function formatContent(content: ContentResult) {
       : null,
     lecture: content.lecture
       ? {
-          media_url: content.lecture.mediaUrl,
+          media_url: lectureMediaUrl,
           description: content.lecture.description,
           difficulty_level: content.lecture.difficultyLevel,
           is_default: content.lecture.isDefault,
@@ -69,7 +83,7 @@ function formatContent(content: ContentResult) {
       : null,
     quiz: content.quiz
       ? {
-          media_url: content.quiz.mediaUrl,
+          media_url: quizMediaUrl,
           description: content.quiz.description,
           difficulty_level: content.quiz.difficultyLevel,
           is_default: content.quiz.isDefault,
@@ -85,7 +99,7 @@ function formatContent(content: ContentResult) {
           is_default: content.game.isDefault,
           unlock_star_cost: content.game.unlockStarCost,
           prompt_asset_type: content.game.promptAssetType,
-          prompt_asset_url: content.game.promptAssetUrl,
+          prompt_asset_url: gamePromptAssetUrl,
         }
       : null,
   };
@@ -217,7 +231,7 @@ const protectedContentRouter = new Elysia()
 
       set.status = 200;
       return {
-        contents: contents.map(formatContent),
+        contents: await Promise.all(contents.map(formatContent)),
       };
     },
     {
@@ -242,7 +256,7 @@ const protectedContentRouter = new Elysia()
 
       set.status = 200;
       return {
-        content: formatContent(content),
+        content: await formatContent(content),
       };
     },
     {

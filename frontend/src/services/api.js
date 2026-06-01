@@ -209,9 +209,12 @@ export const preferencesApi = {
 export const trackingApi = {
   dashboard: (childId, days = 7) => apiRequest(`/children/${childId}/dashboard`, { query: { days } }),
   listEmotionLogs: (childId, query) => apiRequest(`/children/${childId}/emotion-logs`, { query }),
-  predictEmotion: (childId, file) => {
+  predictEmotion: (childId, file, options = {}) => {
     const formData = new FormData()
     formData.append('file', file, file.name || 'camera-frame.jpg')
+    if (options.targetEmotion) {
+      formData.append('target_emotion', options.targetEmotion)
+    }
 
     return apiRequest(`/children/${childId}/emotion-predictions`, {
       method: 'POST',

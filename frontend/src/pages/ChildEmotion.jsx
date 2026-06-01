@@ -6,6 +6,7 @@ import '../styles/Child.css'
 const emotions = [
   {
     id: 'happy',
+    modelEmotion: 'happy',
     label: 'Vui',
     icon: '😊',
     color: '#f6c453',
@@ -14,6 +15,7 @@ const emotions = [
   },
   {
     id: 'sad',
+    modelEmotion: 'sad',
     label: 'Buồn',
     icon: '😢',
     color: '#6aa6d9',
@@ -22,6 +24,7 @@ const emotions = [
   },
   {
     id: 'angry',
+    modelEmotion: 'angry',
     label: 'Tức giận',
     icon: '😠',
     color: '#e87461',
@@ -30,6 +33,7 @@ const emotions = [
   },
   {
     id: 'scared',
+    modelEmotion: 'fear',
     label: 'Sợ',
     icon: '😟',
     color: '#9b8ac6',
@@ -38,6 +42,7 @@ const emotions = [
   },
   {
     id: 'calm',
+    modelEmotion: 'neutral',
     label: 'Bình tĩnh',
     icon: '😌',
     color: '#77bfa3',
@@ -81,7 +86,7 @@ const modelEmotionMap = {
   neutral: {
     uiId: 'calm',
     backendValue: 'neutral',
-    label: 'Trung tính',
+    label: 'Bình tĩnh',
     icon: '😌',
   },
 }
@@ -219,25 +224,34 @@ export default function ChildEmotion() {
         return
       }
 
+      const targetEmotion = selectedEmotion
       const frame = await captureVideoFrame(videoRef.current)
-      const result = await trackingApi.predictEmotion(child.id, frame)
+      const result = await trackingApi.predictEmotion(child.id, frame, {
+        targetEmotion: targetEmotion.modelEmotion,
+      })
       const prediction = result.prediction
       const detectedEmotion = getModelEmotionInfo(prediction.emotion)
       const confidence = Number(prediction.confidence || 0)
-      const matchedEmotion = emotions.find((emotion) => emotion.id === detectedEmotion.uiId)
-
-      if (matchedEmotion) {
-        setSelectedEmotion(matchedEmotion)
-      }
+      const expressionCheck = prediction.expression_check
+      const isCorrect = typeof expressionCheck?.is_correct === 'boolean'
+        ? expressionCheck.is_correct
+        : detectedEmotion.uiId === targetEmotion.id
 
       setScanResult({
-        icon: detectedEmotion.icon,
+        status: isCorrect ? 'correct' : 'incorrect',
+        icon: isCorrect ? '✅' : '🔁',
+        targetIcon: targetEmotion.icon,
+        targetLabel: targetEmotion.label,
+        detectedIcon: detectedEmotion.icon,
+        detectedLabel: detectedEmotion.label,
         confidence,
         scores: prediction.all_scores || {},
-        message: `Mô hình dự đoán con đang gần với cảm xúc "${detectedEmotion.label}".`
+        message: isCorrect
+          ? `Đúng rồi, con đã thể hiện cảm xúc "${targetEmotion.label}".`
+          : `Chưa đúng. Mục tiêu là "${targetEmotion.label}", model đang thấy gần với "${detectedEmotion.label}".`
       })
 
-      setSaveMessage(result.log ? 'Đã dự đoán và lưu kết quả cảm xúc vào nhật ký.' : '')
+      setSaveMessage(result.log ? 'Đã kiểm tra biểu cảm và lưu kết quả vào nhật ký.' : '')
     } catch (error) {
       setCameraError(error.message || 'Không gửi được ảnh đến mô hình cảm xúc.')
     } finally {
@@ -249,14 +263,14 @@ export default function ChildEmotion() {
     <div className="child-emotion-page">
       <div className="emotion-tool-header">
         <div>
-          <h2>Cảm xúc của con</h2>
-          <p>Chọn cảm xúc, nghe câu nói mẫu và kiểm tra biểu cảm bằng camera.</p>
+          <h2>Luyện biểu cảm</h2>
+          <p>Chọn cảm xúc mục tiêu, thể hiện trước camera và để hệ thống kiểm tra đúng hay chưa.</p>
         </div>
         <button className="close-btn" onClick={() => navigate('/child/home')}>×</button>
       </div>
 
       <section className="emotion-picker-panel">
-        <h3>Con đang cảm thấy thế nào?</h3>
+        <h3>Con hãy chọn cảm xúc muốn luyện</h3>
         <div className="emotion-choice-grid">
           {emotions.map((emotion) => (
             <button
@@ -310,16 +324,19 @@ export default function ChildEmotion() {
               {isCameraOn ? 'Tắt camera' : 'Bật camera'}
             </button>
             <button className="tool-btn" onClick={scanExpression} disabled={!isCameraOn || isScanning}>
-              {isScanning ? 'Đang gửi ảnh...' : 'Kiểm tra biểu cảm'}
+              {isScanning ? 'Đang kiểm tra...' : 'Kiểm tra đúng/sai'}
             </button>
           </div>
 
           {cameraError && <p className="camera-error">{cameraError}</p>}
           {scanResult && (
-            <div className="scan-result">
+            <div className={`scan-result ${scanResult.status}`}>
               <span>{scanResult.icon}</span>
               <div>
                 <strong>{scanResult.message}</strong>
+                <p>
+                  Mục tiêu: {scanResult.targetIcon} {scanResult.targetLabel} · Model thấy: {scanResult.detectedIcon} {scanResult.detectedLabel}
+                </p>
                 <p>Độ tin cậy: {Math.round(scanResult.confidence * 100)}%</p>
                 {Object.keys(scanResult.scores || {}).length > 0 && (
                   <p>

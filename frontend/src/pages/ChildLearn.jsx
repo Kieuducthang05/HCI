@@ -36,6 +36,24 @@ function getContentMedia(content) {
   return content.lecture?.media_url || content.quiz?.media_url || '🙂'
 }
 
+function getMediaKind(value) {
+  const source = String(value || '').trim()
+  if (!source) return null
+
+  if (/^data:video\//i.test(source)) return 'video'
+  if (/^data:image\//i.test(source)) return 'image'
+
+  const path = source.split(/[?#]/)[0].toLowerCase()
+  if (/\.(mp4|webm|ogg|mov|m4v)$/.test(path)) return 'video'
+  if (/\.(png|jpe?g|gif|webp|bmp|svg)$/.test(path)) return 'image'
+
+  return null
+}
+
+function isLikelyMediaLink(value) {
+  return /^(https?:|blob:|data:|\/)/i.test(String(value || '').trim())
+}
+
 function makeSessionKey(contentId) {
   if (window.crypto?.randomUUID) return `learn-${contentId}-${window.crypto.randomUUID()}`
   return `learn-${contentId}-${Date.now()}`
@@ -311,6 +329,48 @@ export default function ChildLearn() {
   )
 }
 
+function ContentMedia({ media, fallback = '🙂', title = 'media bài học' }) {
+  const source = String(media || '').trim()
+  const mediaKind = getMediaKind(source)
+
+  if (source && mediaKind === 'video') {
+    return (
+      <div className="lesson-media-frame">
+        <video
+          className="lesson-media-video"
+          src={source}
+          controls
+          preload="metadata"
+          playsInline
+          aria-label={`Video ${title}`}
+        />
+      </div>
+    )
+  }
+
+  if (source && mediaKind === 'image') {
+    return (
+      <div className="lesson-media-frame">
+        <img className="lesson-media-image" src={source} alt={`Minh họa ${title}`} />
+      </div>
+    )
+  }
+
+  if (source && isLikelyMediaLink(source)) {
+    return (
+      <a className="lesson-media-link" href={source} target="_blank" rel="noreferrer">
+        Mở media
+      </a>
+    )
+  }
+
+  return (
+    <div className="emotion-circle" style={{ backgroundColor: '#e3f2fd' }}>
+      <span className="big-emoji">{source || fallback}</span>
+    </div>
+  )
+}
+
 function LectureContent({ content, onComplete }) {
   const media = getContentMedia(content)
   const description = getContentDescription(content)
@@ -318,9 +378,7 @@ function LectureContent({ content, onComplete }) {
 
   return (
     <div className="emotion-card">
-      <div className="emotion-circle" style={{ backgroundColor: '#e3f2fd' }}>
-        <span className="big-emoji">{media}</span>
-      </div>
+      <ContentMedia media={media} title={content.title} />
       <h2 className="emotion-title">{content.title}</h2>
       <p className="emotion-description">{description}</p>
 
@@ -347,9 +405,7 @@ function QuizContent({ content, onAnswer }) {
   return (
     <>
       <div className="emotion-card">
-        <div className="emotion-circle" style={{ backgroundColor: '#f5f5f5' }}>
-          <span className="big-emoji">{quiz.media_url || '❓'}</span>
-        </div>
+        <ContentMedia media={quiz.media_url} fallback="❓" title={content.title} />
         <h2 className="emotion-title">{content.title}</h2>
         <p className="emotion-description">Chọn câu trả lời đúng để backend ghi nhận điểm sao.</p>
       </div>

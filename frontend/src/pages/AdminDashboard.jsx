@@ -11,6 +11,7 @@ import {
   FiSave,
   FiSearch,
   FiTrash2,
+  FiUpload,
   FiUsers,
   FiX,
 } from 'react-icons/fi'
@@ -114,6 +115,12 @@ function toPetForm(pet) {
   }
 }
 
+function getContentMediaPurpose(type) {
+  if (type === 'LECTURE') return 'lecture-media'
+  if (type === 'QUIZ') return 'quiz-media'
+  return 'game-media'
+}
+
 const contentTypeLabels = {
   GAME: 'Trò chơi',
   QUIZ: 'Câu hỏi',
@@ -177,6 +184,7 @@ export default function AdminDashboard() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [mediaUploading, setMediaUploading] = useState(false)
 
   const userName = session?.user?.full_name || session?.user?.email || 'Quản trị viên'
   const tabs = [
@@ -302,6 +310,33 @@ export default function AdminDashboard() {
       setError(err.message || 'Không lưu được nội dung.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleContentMediaUpload = async (event) => {
+    const input = event.target
+    const file = input.files?.[0]
+    if (!file) return
+
+    try {
+      setMediaUploading(true)
+      setError('')
+      const result = await adminApi.uploadMedia({
+        file,
+        purpose: getContentMediaPurpose(contentForm.type),
+      })
+      const mediaUrl = result.media_asset?.storage_key || result.media_asset?.url
+      if (!mediaUrl) {
+        throw new Error('Backend chưa trả về đường dẫn media.')
+      }
+
+      setContentForm((form) => ({ ...form, mediaUrl }))
+      setMessage('Đã tải media lên và điền đường dẫn vào form.')
+    } catch (err) {
+      setError(err.message || 'Không tải media lên được.')
+    } finally {
+      setMediaUploading(false)
+      input.value = ''
     }
   }
 
@@ -463,7 +498,19 @@ export default function AdminDashboard() {
                 </select>
               </div>
               <textarea placeholder="Mô tả" value={contentForm.description} onChange={(e) => setContentForm({ ...contentForm, description: e.target.value })} />
-              <input placeholder="Đường dẫn media hoặc prompt" value={contentForm.mediaUrl} onChange={(e) => setContentForm({ ...contentForm, mediaUrl: e.target.value })} />
+              <div className="admin-media-field">
+                <input placeholder="Đường dẫn media hoặc prompt" value={contentForm.mediaUrl} onChange={(e) => setContentForm({ ...contentForm, mediaUrl: e.target.value })} />
+                <label className={`admin-upload-control ${mediaUploading ? 'disabled' : ''}`}>
+                  <FiUpload aria-hidden="true" />
+                  {mediaUploading ? 'Đang tải...' : 'Chọn video / Tải lên'}
+                  <input
+                    type="file"
+                    accept="video/*,image/*"
+                    disabled={mediaUploading}
+                    onChange={handleContentMediaUpload}
+                  />
+                </label>
+              </div>
               <div className="admin-form-row">
                 <input type="number" min="1" max="3" placeholder="Độ khó" value={contentForm.difficultyLevel} onChange={(e) => setContentForm({ ...contentForm, difficultyLevel: e.target.value })} />
                 {contentForm.type === 'GAME' && (
@@ -483,7 +530,7 @@ export default function AdminDashboard() {
                 </div>
               )}
               <div className="admin-form-actions">
-                <button type="submit" disabled={loading}>
+                <button type="submit" disabled={loading || mediaUploading}>
                   {editingContentId ? <FiSave aria-hidden="true" /> : <FiPlus aria-hidden="true" />}
                   {editingContentId ? 'Lưu thay đổi' : 'Tạo nội dung'}
                 </button>

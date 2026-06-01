@@ -1,4 +1,9 @@
-import { mapEmotionInputToAiLabel, mapEmotionInputToInternal } from "../../domain/ai_inference.ts";
+import {
+  mapEmotionInputToAiLabel,
+  mapEmotionInputToInternal,
+  type ExternalAiEmotionLabel,
+  type InternalEmotionValue,
+} from "../../domain/ai_inference.ts";
 import { AppError } from "../app_error.ts";
 import {
   normalizeUseCaseUuid,
@@ -14,7 +19,8 @@ export type PredictEmotionFromImageErrorType =
   | "MODEL_UNAVAILABLE"
   | "MODEL_REJECTED_IMAGE"
   | "INVALID_MODEL_RESPONSE"
-  | "UNSUPPORTED_MODEL_EMOTION";
+  | "UNSUPPORTED_MODEL_EMOTION"
+  | "UNSUPPORTED_TARGET_EMOTION";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -28,6 +34,7 @@ export type PredictEmotionFromImageInput = {
   parentId: string;
   childId: string;
   file: File;
+  targetEmotion?: string;
 };
 
 export type PredictEmotionFromImageResult = {
@@ -36,6 +43,11 @@ export type PredictEmotionFromImageResult = {
     internalEmotion: string;
     confidence: number;
     allScores: Record<string, number>;
+    expressionCheck: {
+      targetEmotion: ExternalAiEmotionLabel;
+      targetInternalEmotion: InternalEmotionValue;
+      isCorrect: boolean;
+    } | null;
   };
   log: LogEmotionResult;
 };
@@ -174,6 +186,30 @@ function normalizeModelPrediction(data: unknown): ModelPrediction {
   };
 }
 
+function normalizeTargetEmotion(value: string | undefined): {
+  internalEmotion: InternalEmotionValue;
+  aiEmotionLabel: ExternalAiEmotionLabel;
+} | null {
+  const rawValue = value?.trim();
+  if (!rawValue) return null;
+
+  const internalEmotion = mapEmotionInputToInternal(rawValue);
+  const aiEmotionLabel = mapEmotionInputToAiLabel(rawValue);
+
+  if (!internalEmotion || !aiEmotionLabel) {
+    throw new AppError<PredictEmotionFromImageErrorType>(
+      "UNSUPPORTED_TARGET_EMOTION",
+      "Target emotion is not supported by the emotion model.",
+      400,
+    );
+  }
+
+  return {
+    internalEmotion,
+    aiEmotionLabel,
+  };
+}
+
 function assertImageFile(file: File): void {
   if (!file) {
     throw new AppError<PredictEmotionFromImageErrorType>("MISSING_FILE", "File is required.", 400);
@@ -287,6 +323,7 @@ export async function predictEmotionFromImage(
     );
   }
 
+  const targetEmotion = normalizeTargetEmotion(input.targetEmotion);
   const { prediction, modelServerUrl } = await requestModelPrediction(input.file);
   const internalEmotion = mapEmotionInputToInternal(prediction.emotion);
   const aiEmotionLabel = mapEmotionInputToAiLabel(prediction.emotion);
@@ -298,6 +335,14 @@ export async function predictEmotionFromImage(
       502,
     );
   }
+
+  const expressionCheck = targetEmotion
+    ? {
+        targetEmotion: targetEmotion.aiEmotionLabel,
+        targetInternalEmotion: targetEmotion.internalEmotion,
+        isCorrect: targetEmotion.aiEmotionLabel === aiEmotionLabel,
+      }
+    : null;
 
   const log = await recordEmotionLog({
     parentId,
@@ -317,6 +362,13 @@ export async function predictEmotionFromImage(
       image_file_name: input.file.name || null,
       frame_uploaded_to_model: true,
       frame_persisted: false,
+      ...(expressionCheck
+        ? {
+            expression_target_emotion: expressionCheck.targetInternalEmotion,
+            expression_target_ai_emotion_label: expressionCheck.targetEmotion,
+            expression_is_correct: expressionCheck.isCorrect,
+          }
+        : {}),
     },
   });
 
@@ -326,6 +378,7 @@ export async function predictEmotionFromImage(
       internalEmotion,
       confidence: prediction.confidence,
       allScores: prediction.all_scores,
+      expressionCheck,
     },
     log,
   };
