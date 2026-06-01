@@ -25,6 +25,26 @@ CREATE INDEX IF NOT EXISTS "idx_users_email"
 CREATE INDEX IF NOT EXISTS "idx_users_phone_number"
   ON "users" USING btree ("phone_number" citext_ops ASC NULLS LAST);
 
+INSERT INTO "users" (
+  "id",
+  "email",
+  "password_hash",
+  "auth_provider",
+  "full_name",
+  "role",
+  "status"
+)
+VALUES (
+  '00000000-0000-4000-8000-000000000001',
+  'admin@gmail.com',
+  '$argon2id$v=19$m=65536,t=2,p=1$kb7KHMSYalfNK/07TWWTlclnmV3qovrqP+g7ph/tEOM$wWRVBOnLrNpePoLP59fiqe8h6m4LKpIIEt/ANZ8QtoE',
+  'LOCAL',
+  'Admin',
+  'ADMIN',
+  'ACTIVE'
+)
+ON CONFLICT ("email") DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS "password_reset_codes" (
   "id" uuid PRIMARY KEY NOT NULL,
   "user_id" uuid NOT NULL,

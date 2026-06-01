@@ -37,7 +37,7 @@ body.dark-mode {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #faf9f6;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   overflow: hidden;
 }
@@ -1962,11 +1962,11 @@ body.dark-mode {
 
 /* ====== FIXED LIGHT BACKGROUND ====== */
 .choose-emotion-game {
-  background: #ffffff;
+  background: #faf9f6;
 }
 
 .child-container {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #faf9f6;
 }
 
 .child-main-content {

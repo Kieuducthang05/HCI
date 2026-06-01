@@ -1,7 +1,7 @@
 :root {
   --text: #6b6375;
   --text-h: #08060d;
-  --bg: #fff;
+  --bg: #faf9f6;
   --border: #e5e4e7;
   --code-bg: #f4f3ec;
   --accent: #aa3bff;
@@ -10,7 +10,7 @@
   --social-bg: rgba(244, 243, 236, 0.5);
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-  --bg-primary: #ffffff;
+  --bg-primary: #faf9f6;
   --bg-secondary: #ffffff;
   --text-primary: #2c3e50;
   --text-secondary: #7f8c8d;
@@ -37,7 +37,7 @@
 html,
 body {
   margin: 0;
-  background: #ffffff;
+  background: #faf9f6;
   color: var(--text);
 }
 
@@ -51,7 +51,7 @@ body {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  background: #ffffff;
+  background: #faf9f6;
 }
 
 h1,
