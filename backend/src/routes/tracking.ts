@@ -118,6 +118,7 @@ const protectedTrackingRouter = new Elysia()
         parentId: authUserId,
         childId: params.childId,
         file: body.file,
+        targetEmotion: body.target_emotion,
       });
 
       set.status = 201;
@@ -128,6 +129,13 @@ const protectedTrackingRouter = new Elysia()
           internal_emotion: result.prediction.internalEmotion,
           confidence: result.prediction.confidence,
           all_scores: result.prediction.allScores,
+          expression_check: result.prediction.expressionCheck
+            ? {
+                target_emotion: result.prediction.expressionCheck.targetEmotion,
+                target_internal_emotion: result.prediction.expressionCheck.targetInternalEmotion,
+                is_correct: result.prediction.expressionCheck.isCorrect,
+              }
+            : null,
         },
         log: formatEmotionLog(result.log),
       };
@@ -139,6 +147,7 @@ const protectedTrackingRouter = new Elysia()
       }),
       body: t.Object({
         file: t.File(),
+        target_emotion: t.Optional(t.String()),
       }),
     },
   )

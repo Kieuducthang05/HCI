@@ -360,6 +360,42 @@
   resize: vertical;
 }
 
+.admin-media-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.admin-upload-control {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-upload-control:hover {
+  background: #dbeafe;
+}
+
+.admin-upload-control.disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.admin-upload-control input {
+  display: none;
+}
+
 .admin-form-row,
 .admin-form-actions,
 .row-actions {
@@ -479,8 +515,10 @@
 
   .admin-form-row,
   .admin-form-actions,
+  .admin-media-field,
   .row-actions {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .admin-form-actions button,
