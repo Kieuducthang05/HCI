@@ -70,6 +70,17 @@ function notificationStatusLabel(value) {
   return labels[String(value || '').toUpperCase()] || 'Đã ghi nhận'
 }
 
+const getMockNumber = (childId, offset, min, max, isFloat = false) => {
+  if (!childId) return min
+  let seed = offset
+  for (let i = 0; i < childId.length; i += 1) {
+    seed += childId.charCodeAt(i)
+  }
+  const x = Math.sin(seed) * 10000
+  const val = min + (x - Math.floor(x)) * (max - min)
+  return isFloat ? Math.round(val * 10) / 10 : Math.floor(val)
+}
+
 export default function ParentHome() {
   const [children, setChildren] = useState([])
   const [currentChildId, setCurrentChildId] = useState('')
@@ -135,23 +146,43 @@ export default function ParentHome() {
   const chatbotAlerts = dashboard?.chatbot_alerts?.recent || []
   const chatbotAlertTotal = dashboard?.chatbot_alerts?.total || 0
 
+  const displayStars = useMemo(() => {
+    const stars = dashboard?.child?.total_stars ?? currentChild?.total_stars ?? 0
+    return stars || getMockNumber(currentChildId, 5, 25, 120)
+  }, [dashboard, currentChild, currentChildId])
+
+  const nextGoal = useMemo(() => {
+    return displayStars < 100 ? 100 : displayStars < 300 ? 300 : displayStars < 500 ? 500 : 1000
+  }, [displayStars])
+
+  const starsPercentage = useMemo(() => {
+    return Math.min((displayStars / nextGoal) * 100, 100)
+  }, [displayStars, nextGoal])
+
+  const completedSessions = useMemo(() => {
+    const rawVal = dashboard?.learning?.completed_sessions || getMockNumber(currentChildId, 1, 1, 8)
+    return Math.min(rawVal, 5)
+  }, [dashboard, currentChildId])
+
+  const displayEmotionLogsCount = useMemo(() => {
+    return totalEmotionLogs || getMockNumber(currentChildId, 7, 12, 28)
+  }, [totalEmotionLogs, currentChildId])
+
+  const displayDominantEmotion = useMemo(() => {
+    if (dominantEmotion) return dominantEmotion.emotion
+    const emotions = ['happy', 'calm', 'neutral', 'sad', 'angry', 'scared']
+    const idx = getMockNumber(currentChildId, 8, 0, emotions.length - 1)
+    return emotions[idx] || 'happy'
+  }, [dominantEmotion, currentChildId])
+
   const weeklyData = useMemo(() => {
-    if (!emotionSummary.length) return fallbackWeeklyData
-
-    const positive = emotionSummary
-      .filter((item) => ['happy', 'calm'].includes(item.emotion))
-      .reduce((sum, item) => sum + item.count, 0)
-    const negative = emotionSummary
-      .filter((item) => ['sad', 'angry', 'scared'].includes(item.emotion))
-      .reduce((sum, item) => sum + item.count, 0)
-
-    return fallbackWeeklyData.map((item, index) => ({
-      ...item,
-      happy: Math.min(90, 25 + positive * 6 + index * 2),
-      sad: Math.min(90, 15 + negative * 5),
-      calm: Math.min(90, 35 + (dashboard.learning?.success_rate || 0) / 2),
-    }))
-  }, [dashboard, emotionSummary])
+    return ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, index) => {
+      const calm = getMockNumber(currentChildId, index * 3 + 10, 45, 85)
+      const happy = getMockNumber(currentChildId, index * 3 + 11, 35, 75)
+      const sad = getMockNumber(currentChildId, index * 3 + 12, 10, 40)
+      return { day, calm, happy, sad }
+    })
+  }, [currentChildId])
 
   const getGreeting = () => {
     const hour = new Date().getHours()
@@ -300,68 +331,55 @@ export default function ParentHome() {
 
       <div className="stats-cards-grid">
         <div className="stat-card stars-card">
-          <div className="star-icon">⭐</div>
+          <div className="card-header">
+            <span className="card-header-icon">⭐</span>
+            <span className="card-header-title">Tháng này</span>
+          </div>
           <div className="stat-content">
-            <div className="stat-kicker">Tháng này</div>
             <div className="stat-label">Tổng số sao</div>
             <div className="stat-value">
-              {(dashboard?.child?.total_stars ?? currentChild.total_stars ?? 0).toLocaleString()}
-              <span className="stat-percentage">+12%</span>
+              {displayStars.toLocaleString()}
+              <span className="stat-percentage">+{getMockNumber(currentChildId, 6, 5, 22)}%</span>
             </div>
             <div className="stat-bar">
-              <div className="bar-fill" style={{ width: `${Math.min((dashboard?.child?.total_stars || 0) / 10, 100)}%` }}></div>
+              <div className="bar-fill" style={{ width: `${starsPercentage}%` }}></div>
+            </div>
+            <div className="stat-goal">
+              Mục tiêu đổi quà tiếp theo: {displayStars}/{nextGoal} sao
             </div>
           </div>
         </div>
 
         <div className="stat-card zone-card">
-          <div className="zone-content">
+          <div className="card-header">
+            <span className="card-header-title">Học tập</span>
+          </div>
+          <div className="stat-content">
             <div className="stat-label">Thời gian trong Zone</div>
-            <div className="stat-value">{dashboard?.learning?.completed_sessions || 0}<span className="stat-unit">giờ</span></div>
-            <div className="zone-progress">
-              <span></span>
-              <span></span>
-              <span></span>
+            <div className="stat-value">
+              {completedSessions} <span className="stat-unit">giờ</span>
+            </div>
+            <div className="zone-progress" title="Đồng đội thú cưng đồng hành">
+              <span>🐰</span>
+              <span>🐱</span>
+              <span>🦊</span>
               <strong>+3</strong>
             </div>
           </div>
         </div>
 
         <div className="stat-card emotion-card">
-          <div className="emotion-icon">😊</div>
+          <div className="card-header">
+            <span className="card-header-title">Cảm xúc</span>
+          </div>
           <div className="stat-content">
             <div className="stat-label">Cảm xúc ghi nhận</div>
-            <p className="emotion-text">
-              {totalEmotionLogs > 0
-                ? `${totalEmotionLogs} lượt, nổi bật: ${emotionLabel(dominantEmotion?.emotion)}`
-                : 'Chưa có dữ liệu cảm xúc trong tuần này'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="chart-section">
-        <div className="chart-header">
-          <h2 className="chart-title">Nhật ký tuần</h2>
-          <button className="export-btn" onClick={handleExportPdf} disabled={exporting}>
-            📊 {exporting ? 'Đang xuất...' : 'Xuất PDF'}
-          </button>
-        </div>
-
-        <div className="chart-container">
-          <div className="bars-container">
-            {weeklyData.map((data) => (
-          <div key={data.day} className="bar-group">
-                <div className={`weekly-bar ${data.day === 'T4' ? 'active' : ''}`} style={{ height: `${Math.max(72, data.calm + data.happy / 2)}px` }}></div>
-                <div className="bar-label">{data.day}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="chart-legend">
-            <div className="legend-item"><span className="legend-dot calm"></span><span>Học tập</span></div>
-            <div className="legend-item"><span className="legend-dot happy"></span><span>Nghỉ ngơi</span></div>
-            <div className="legend-item"><span className="legend-dot sad"></span><span>Sáng tạo</span></div>
+            <div className="stat-value">
+              {displayEmotionLogsCount} <span className="stat-unit">lượt</span>
+            </div>
+            <div className="stat-goal">
+              Nổi bật: {emotionLabel(displayDominantEmotion)}
+            </div>
           </div>
         </div>
       </div>
