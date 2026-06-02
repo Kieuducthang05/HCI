@@ -52,6 +52,14 @@ export function setSelectedChild(child) {
   localStorage.setItem(SELECTED_CHILD_KEY, JSON.stringify(child))
 }
 
+export function resolveMediaUrl(path) {
+  if (!path) return ''
+  const value = String(path).trim()
+  if (/^(https?:|blob:|data:)/i.test(value)) return value
+  if (/^\/static\//i.test(value)) return `${API_BASE_URL}${value}`
+  return `${API_BASE_URL}/static/${value.replace(/^\//, '')}`
+}
+
 function buildQuery(params = {}) {
   const query = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {

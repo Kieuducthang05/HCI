@@ -715,6 +715,12 @@ export default function ChildGames() {
 
   const currentGameData = activeGameList[gameIndex]
   const isGameComplete = gameIndex >= activeGameList.length
+
+  if (!currentGameData || isGameComplete) {
+    setTimeout(() => backToMenu(), 0)
+    return null
+  }
+
   const feedbackOverlay = feedback && (
     feedback.isCorrect ? (
       <CorrectAnswer
