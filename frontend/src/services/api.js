@@ -1,6 +1,6 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050').replace(/\/$/, '')
 const CHATBOT_BASE_URL = (import.meta.env.VITE_CHATBOT_BASE_URL || 'http://localhost:8080').replace(/\/$/, '')
-const VISION_BASE_URL = (import.meta.env.VITE_VISION_BASE_URL || 'http://localhost:9000').replace(/\/$/, '')
+const VISION_BASE_URL = (import.meta.env.VITE_VISION_BASE_URL || 'http://localhost:9090').replace(/\/$/, '')
 
 const SESSION_KEY = 'hci.session'
 const SELECTED_CHILD_KEY = 'hci.selectedChild'
