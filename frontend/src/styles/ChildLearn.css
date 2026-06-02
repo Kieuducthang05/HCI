@@ -143,19 +143,35 @@
 
 .question-page {
   min-height: 100vh;
-  background: #ffffff;
+  background: transparent;
   color: #252525;
   animation: fadeIn 0.35s ease;
 }
 
+.child-page-questions {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.child-page-questions .child-main-content {
+  padding: 16px;
+  background:
+    radial-gradient(circle at 10% 12%, rgba(255, 240, 191, 0.28), transparent 30%),
+    radial-gradient(circle at 88% 18%, rgba(80, 227, 194, 0.16), transparent 28%),
+    linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
 .question-page .lesson-card {
   width: min(100%, 1040px);
-  min-height: 720px;
+  min-height: calc(100vh - 32px);
   margin: 0 auto;
   padding: 24px 24px 56px;
-  border-radius: 0;
-  background: #ffffff;
-  box-shadow: none;
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 8% 16%, rgba(255, 240, 191, 0.38), transparent 28%),
+    radial-gradient(circle at 90% 14%, rgba(235, 245, 255, 0.9), transparent 24%),
+    linear-gradient(180deg, #fffdf8 0%, #f7f2ea 100%);
+  box-shadow: 0 22px 52px rgba(31, 35, 73, 0.26);
 }
 
 .question-page .question-page-heading {
@@ -791,8 +807,9 @@
 
 @media (max-width: 768px) {
   .question-page .lesson-card {
-    min-height: 100vh;
+    min-height: calc(100vh - 32px);
     padding: 18px 16px 44px;
+    border-radius: 24px;
   }
 
   .question-back-btn {
@@ -840,6 +857,7 @@
 @media (max-width: 480px) {
   .question-page .lesson-card {
     padding: 14px 12px 34px;
+    border-radius: 20px;
   }
 
   .question-page .question-page-heading {

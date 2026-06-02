@@ -41,7 +41,7 @@ export default function ChildLayout() {
   }
 
   return (
-    <div className={`child-container${isPlainChildPage ? ' child-container-plain' : ''}`}>
+    <div className={`child-container child-page-${activeMenu}${isPlainChildPage ? ' child-container-plain' : ''}`}>
       {/* Top Bar with Stars */}
       <div className="child-topbar">
         <div className="topbar-left">

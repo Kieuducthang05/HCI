@@ -441,7 +441,7 @@ export default function ChildGames() {
       .then((result) => {
         const contents = result.contents || []
         setGameContents(contents)
-        setContentError(contents.length ? '' : 'Backend chưa có nội dung GAME để cộng sao.')
+        setContentError(contents.length ? '' : '')
       })
       .catch((error) => {
         setContentError(error.message || 'Không tải được nội dung game từ backend.')
@@ -685,7 +685,7 @@ export default function ChildGames() {
     return (
       <div className="choose-emotion-game game-play-shell game1-shell">
         {feedbackOverlay}
-        <GamePlayTopbar onBack={backToMenu} score={displayStars} scoreLabel="Score:" />
+        <GamePlayTopbar onBack={backToMenu} score={displayStars} />
 
         <div className="choose-emotion-content">
           <h2 className="game1-title">
@@ -760,7 +760,7 @@ export default function ChildGames() {
   return (
     <ExpressionGame
       data={currentGameData}
-      score={score}
+      score={displayStars}
       currentIndex={gameIndex}
       total={activeGameList.length}
       selectedChild={selectedChild}
