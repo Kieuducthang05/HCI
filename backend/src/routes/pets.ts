@@ -3,12 +3,22 @@ import { buyPet } from "../usecases/pets/buy_pet.ts";
 import { listActivePets } from "../usecases/pets/list_active_pets.ts";
 import { listChildPets } from "../usecases/pets/list_child_pets.ts";
 import { renameChildPet } from "../usecases/pets/rename_child_pet.ts";
+import { getFileUrl } from "../storage/s3.ts";
 import { withApiErrorHandler } from "./api_error_handler.ts";
 import { requireAuth } from "./middleware/require_auth.ts";
 
 function parseOptionalNumber(rawValue: string | undefined): number | undefined {
   if (rawValue === undefined || rawValue.trim() === "") return undefined;
   return Number(rawValue);
+}
+
+function isUploadedMediaKey(value: string | null): value is string {
+  return Boolean(value && value.startsWith("media-assets/"));
+}
+
+async function resolveMediaUrl(value: string | null): Promise<string | null> {
+  if (!isUploadedMediaKey(value)) return value;
+  return await getFileUrl(value, 3600);
 }
 
 const protectedPetsRouter = new Elysia()
@@ -23,17 +33,19 @@ const protectedPetsRouter = new Elysia()
 
       set.status = 200;
       return {
-        pets: result.pets.map((pet) => ({
-          id: pet.id,
-          name: pet.name,
-          description: pet.description,
-          image_url: pet.imageUrl,
-          animation_url: pet.animationUrl,
-          unlock_star_cost: pet.unlockStarCost,
-          status: pet.status,
-          created_at: pet.createdAt,
-          updated_at: pet.updatedAt,
-        })),
+        pets: await Promise.all(
+          result.pets.map(async (pet) => ({
+            id: pet.id,
+            name: pet.name,
+            description: pet.description,
+            image_url: await resolveMediaUrl(pet.imageUrl),
+            animation_url: await resolveMediaUrl(pet.animationUrl),
+            unlock_star_cost: pet.unlockStarCost,
+            status: pet.status,
+            created_at: pet.createdAt,
+            updated_at: pet.updatedAt,
+          }))
+        ),
         next_cursor: result.nextCursor,
       };
     },
@@ -49,23 +61,25 @@ const protectedPetsRouter = new Elysia()
 
     set.status = 200;
     return {
-      child_pets: childPets.map((childPet) => ({
-        id: childPet.id,
-        child_id: childPet.childId,
-        pet_id: childPet.petId,
-        custom_name: childPet.customName,
-        unlocked_at: childPet.unlockedAt,
-        pet: {
-          id: childPet.pet.id,
-          name: childPet.pet.name,
-          description: childPet.pet.description,
-          image_url: childPet.pet.imageUrl,
-          animation_url: childPet.pet.animationUrl,
-          unlock_star_cost: childPet.pet.unlockStarCost,
-          status: childPet.pet.status,
-          deleted_at: childPet.pet.deletedAt,
-        },
-      })),
+      child_pets: await Promise.all(
+        childPets.map(async (childPet) => ({
+          id: childPet.id,
+          child_id: childPet.childId,
+          pet_id: childPet.petId,
+          custom_name: childPet.customName,
+          unlocked_at: childPet.unlockedAt,
+          pet: {
+            id: childPet.pet.id,
+            name: childPet.pet.name,
+            description: childPet.pet.description,
+            image_url: await resolveMediaUrl(childPet.pet.imageUrl),
+            animation_url: await resolveMediaUrl(childPet.pet.animationUrl),
+            unlock_star_cost: childPet.pet.unlockStarCost,
+            status: childPet.pet.status,
+            deleted_at: childPet.pet.deletedAt,
+          },
+        }))
+      ),
     };
   })
   .post(
@@ -120,8 +134,8 @@ const protectedPetsRouter = new Elysia()
           pet: {
             id: childPet.pet.id,
             name: childPet.pet.name,
-            image_url: childPet.pet.imageUrl,
-            animation_url: childPet.pet.animationUrl,
+            image_url: await resolveMediaUrl(childPet.pet.imageUrl),
+            animation_url: await resolveMediaUrl(childPet.pet.animationUrl),
           },
         },
       };
