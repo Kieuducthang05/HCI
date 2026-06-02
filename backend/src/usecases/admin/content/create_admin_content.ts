@@ -31,8 +31,18 @@ export type CreateAdminContentInput = {
     unlockStarCost?: number;
     promptAssetType?: string | null;
     promptAssetUrl?: string | null;
+    config?: Record<string, unknown> | null;
   };
 };
+
+function normalizeGameConfig(config: unknown): Record<string, unknown> {
+  if (config === undefined || config === null) return {};
+  if (typeof config !== "object" || Array.isArray(config)) {
+    throw new AppError("INVALID_GAME_CONFIG", "Game config must be an object.", 400);
+  }
+
+  return config as Record<string, unknown>;
+}
 
 export async function createAdminContent(input: CreateAdminContentInput): Promise<ContentResult> {
   const adminId = normalizeAdminId(input.adminId);
@@ -128,6 +138,7 @@ export async function createAdminContent(input: CreateAdminContentInput): Promis
       unlockStarCost,
       promptAssetType,
       promptAssetUrl: input.game.promptAssetUrl?.trim() || null,
+      config: normalizeGameConfig(input.game.config),
     };
   }
 

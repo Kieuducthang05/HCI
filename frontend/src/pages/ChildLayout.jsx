@@ -9,6 +9,7 @@ export default function ChildLayout() {
   const selectedChild = getSelectedChild()
   const [userStars, setUserStars] = useState(selectedChild?.total_stars || 0)
   const activeMenu = location.pathname.split('/')[2] || 'home'
+  const isPlainChildPage = ['questions', 'games'].includes(activeMenu)
 
   useEffect(() => {
     const child = getSelectedChild()
@@ -27,9 +28,7 @@ export default function ChildLayout() {
 
   const menuItems = [
     { id: 'home', label: 'Trang chủ', icon: '🏠' },
-    { id: 'emotion', label: 'Cảm xúc', icon: '💬' },
-    { id: 'avatar', label: 'Avatar', icon: '👤' },
-    { id: 'inventory', label: 'Kho', icon: '🎒' }
+    { id: 'inventory', label: 'Vật phẩm', icon: '💎' }
   ]
 
   const handleMenuClick = (menuId) => {
@@ -42,7 +41,7 @@ export default function ChildLayout() {
   }
 
   return (
-    <div className="child-container">
+    <div className={`child-container${isPlainChildPage ? ' child-container-plain' : ''}`}>
       {/* Top Bar with Stars */}
       <div className="child-topbar">
         <div className="topbar-left">

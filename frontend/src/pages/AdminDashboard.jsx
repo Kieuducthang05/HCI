@@ -26,6 +26,18 @@ const emptyContentForm = {
   mediaUrl: '',
   answerEmotions: 'JOY,SAD,ANGRY,CALM',
   correctEmotion: 'JOY',
+  gameKind: 'CHOOSE_EMOTION',
+  gameQuestion: '',
+  gamePromptImageUrl: '',
+  gamePromptPreviewUrl: '',
+  gameOptions: [
+    { label: 'Vui', emotion: 'JOY', value: 'JOY', imageUrl: '', src: '😊' },
+    { label: 'Buồn', emotion: 'SAD', value: 'SAD', imageUrl: '', src: '😢' },
+    { label: 'Tức giận', emotion: 'ANGRY', value: 'ANGRY', imageUrl: '', src: '😡' },
+    { label: 'Ngạc nhiên', emotion: 'SURPRISED', value: 'SURPRISED', imageUrl: '', src: '😮' },
+  ],
+  gameCorrectIndex: 0,
+  gameCorrectIndexes: [2],
   targetEmotion: 'JOY',
   timeLimitSeconds: 60,
   difficultyLevel: 1,
@@ -39,6 +51,92 @@ const emptyPetForm = {
   animationUrl: '',
   unlockStarCost: 100,
   status: 'ACTIVE',
+}
+
+function getDefaultGameOptions(kind) {
+  if (kind === 'CHOOSE_REACTION') {
+    return [
+      { label: 'Bỏ đi', emotion: 'CALM', value: 'LEAVE', imageUrl: '', src: '🚶' },
+      { label: 'Cười', emotion: 'JOY', value: 'LAUGH', imageUrl: '', src: '😆' },
+      { label: 'An ủi', emotion: 'CALM', value: 'COMFORT', imageUrl: '', src: '🤝' },
+    ]
+  }
+
+  return [
+    { label: 'Vui', emotion: 'JOY', value: 'JOY', imageUrl: '', src: '😊' },
+    { label: 'Buồn', emotion: 'SAD', value: 'SAD', imageUrl: '', src: '😢' },
+    { label: 'Tức giận', emotion: 'ANGRY', value: 'ANGRY', imageUrl: '', src: '😡' },
+    { label: 'Ngạc nhiên', emotion: 'SURPRISED', value: 'SURPRISED', imageUrl: '', src: '😮' },
+  ]
+}
+
+function normalizeGameKind(value) {
+  if (value === 'CHOOSE_REACTION' || value === 'MATCH_EMOTION') return value
+  return 'CHOOSE_EMOTION'
+}
+
+function normalizeGameOptions(kind, options) {
+  const defaults = getDefaultGameOptions(kind)
+  const source = Array.isArray(options) && options.length ? options : defaults
+  const targetLength = kind === 'CHOOSE_REACTION' ? 3 : 4
+
+  return Array.from({ length: targetLength }).map((_, index) => {
+    const option = source[index] || defaults[index] || {}
+    return {
+      label: option.label || defaults[index]?.label || `Đáp án ${index + 1}`,
+      emotion: option.emotion || option.value || defaults[index]?.emotion || 'CALM',
+      value: option.value || option.emotion || defaults[index]?.value || `OPTION_${index + 1}`,
+      imageUrl: option.imageUrl || '',
+      previewUrl: option.previewUrl || option.resolvedImageUrl || '',
+      src: option.src || defaults[index]?.src || '',
+    }
+  })
+}
+
+function buildGameConfig(form) {
+  const kind = normalizeGameKind(form.gameKind)
+
+  if (kind === 'MATCH_EMOTION') {
+    return { kind: 'MATCH_EMOTION' }
+  }
+
+  const options = normalizeGameOptions(kind, form.gameOptions).map((option) => ({
+    label: option.label.trim(),
+    emotion: option.emotion.trim().toUpperCase(),
+    value: option.value.trim(),
+    imageUrl: option.imageUrl.trim(),
+    src: option.src.trim(),
+  }))
+
+  if (kind === 'CHOOSE_REACTION') {
+    return {
+      kind,
+      question: form.gameQuestion.trim(),
+      promptImageUrl: form.gamePromptImageUrl.trim(),
+      options,
+      correctIndexes: form.gameCorrectIndexes,
+    }
+  }
+
+  return {
+    kind,
+    question: form.gameQuestion.trim(),
+    description: form.description.trim(),
+    options,
+    correctIndex: Number(form.gameCorrectIndex) || 0,
+  }
+}
+
+function getGameTargetEmotion(form) {
+  const kind = normalizeGameKind(form.gameKind)
+  const options = normalizeGameOptions(kind, form.gameOptions)
+
+  if (kind === 'CHOOSE_EMOTION') {
+    const correctOption = options[Number(form.gameCorrectIndex) || 0]
+    return (correctOption?.emotion || form.targetEmotion || 'JOY').trim().toUpperCase()
+  }
+
+  return (form.targetEmotion || 'CALM').trim().toUpperCase()
 }
 
 function buildContentPayload(form) {
@@ -77,18 +175,25 @@ function buildContentPayload(form) {
   return {
     ...base,
     game: {
-      targetEmotion: form.targetEmotion.trim().toUpperCase(),
+      targetEmotion: getGameTargetEmotion(form),
       timeLimitSeconds: Number(form.timeLimitSeconds),
       difficultyLevel: Number(form.difficultyLevel),
       isDefault: false,
       unlockStarCost: Number(form.unlockStarCost),
-      promptAssetType: null,
-      promptAssetUrl: form.mediaUrl || null,
+      promptAssetType: form.gamePromptImageUrl || form.mediaUrl ? 'IMAGE' : null,
+      promptAssetUrl: form.mediaUrl || form.gamePromptImageUrl || null,
+      config: buildGameConfig(form),
     },
   }
 }
 
 function toContentForm(content) {
+  const gameConfig = content.game?.config || {}
+  const gameKind = normalizeGameKind(gameConfig.kind)
+  const correctIndexes = Array.isArray(gameConfig.correctIndexes)
+    ? gameConfig.correctIndexes.map((item) => Number(item)).filter((item) => Number.isInteger(item))
+    : [2]
+
   return {
     title: content.title || '',
     type: content.type || 'GAME',
@@ -97,6 +202,13 @@ function toContentForm(content) {
     mediaUrl: content.lecture?.media_url || content.quiz?.media_url || content.game?.prompt_asset_url || '',
     answerEmotions: (content.quiz?.answer_emotions || ['JOY', 'SAD', 'ANGRY', 'CALM']).join(','),
     correctEmotion: content.quiz?.correct_emotion || 'JOY',
+    gameKind,
+    gameQuestion: gameConfig.question || '',
+    gamePromptImageUrl: gameConfig.promptImageUrl || content.game?.prompt_asset_url || '',
+    gamePromptPreviewUrl: gameConfig.promptPreviewUrl || gameConfig.promptImageUrl || content.game?.prompt_asset_url || '',
+    gameOptions: normalizeGameOptions(gameKind, gameConfig.options),
+    gameCorrectIndex: Number.isInteger(gameConfig.correctIndex) ? gameConfig.correctIndex : 0,
+    gameCorrectIndexes: correctIndexes,
     targetEmotion: content.game?.target_emotion || 'JOY',
     timeLimitSeconds: content.game?.time_limit_seconds || 60,
     difficultyLevel: content.difficulty_level || 1,
@@ -156,6 +268,16 @@ const emotionLabels = {
   NEUTRAL: 'Trung tính',
   SCARED: 'Sợ hãi',
   SURPRISED: 'Ngạc nhiên',
+}
+
+function AdminField({ label, hint, children, className = '' }) {
+  return (
+    <div className={`admin-field ${className}`.trim()}>
+      <span className="admin-field-label">{label}</span>
+      {children}
+      {hint && <small className="admin-field-hint">{hint}</small>}
+    </div>
+  )
 }
 
 function StatCard({ label, value, hint }) {
@@ -313,6 +435,43 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleContentTypeChange = (type) => {
+    setContentForm((form) => ({ ...form, type }))
+  }
+
+  const handleGameKindChange = (gameKind) => {
+    const nextKind = normalizeGameKind(gameKind)
+    setContentForm((form) => ({
+      ...form,
+      gameKind: nextKind,
+      gameOptions: normalizeGameOptions(nextKind, form.gameOptions),
+      gameCorrectIndex: 0,
+      gameCorrectIndexes: nextKind === 'CHOOSE_REACTION' ? [2] : [],
+      targetEmotion: nextKind === 'CHOOSE_REACTION' ? 'CALM' : 'JOY',
+    }))
+  }
+
+  const updateGameOption = (index, patch) => {
+    setContentForm((form) => ({
+      ...form,
+      gameOptions: normalizeGameOptions(form.gameKind, form.gameOptions).map((option, optionIndex) => (
+        optionIndex === index ? { ...option, ...patch } : option
+      )),
+    }))
+  }
+
+  const toggleGameCorrectIndex = (index) => {
+    setContentForm((form) => {
+      const current = Array.isArray(form.gameCorrectIndexes) ? form.gameCorrectIndexes : []
+      const exists = current.includes(index)
+      const next = exists ? current.filter((item) => item !== index) : [...current, index]
+      return {
+        ...form,
+        gameCorrectIndexes: next.length ? next : [index],
+      }
+    })
+  }
+
   const handleContentMediaUpload = async (event) => {
     const input = event.target
     const file = input.files?.[0]
@@ -334,6 +493,38 @@ export default function AdminDashboard() {
       setMessage('Đã tải media lên và điền đường dẫn vào form.')
     } catch (err) {
       setError(err.message || 'Không tải media lên được.')
+    } finally {
+      setMediaUploading(false)
+      input.value = ''
+    }
+  }
+
+  const handleGameConfigImageUpload = async (event, target) => {
+    const input = event.target
+    const file = input.files?.[0]
+    if (!file) return
+
+    try {
+      setMediaUploading(true)
+      setError('')
+      const result = await adminApi.uploadMedia({
+        file,
+        purpose: 'game-media',
+      })
+      const storageKey = result.media_asset?.storage_key || result.media_asset?.url
+      const previewUrl = result.media_asset?.url || storageKey
+      if (!storageKey) {
+        throw new Error('Backend chưa trả về đường dẫn media.')
+      }
+
+      if (target.type === 'prompt') {
+        setContentForm((form) => ({ ...form, gamePromptImageUrl: storageKey, gamePromptPreviewUrl: previewUrl }))
+      } else if (target.type === 'option') {
+        updateGameOption(target.index, { imageUrl: storageKey, previewUrl })
+      }
+      setMessage('Đã tải ảnh game lên và điền vào form.')
+    } catch (err) {
+      setError(err.message || 'Không tải ảnh game lên được.')
     } finally {
       setMediaUploading(false)
       input.value = ''
@@ -479,54 +670,210 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === 'contents' && (
-          <section className="admin-section split">
-            <form className="admin-form" onSubmit={handleContentSubmit}>
+          <section className="admin-section content-management">
+            <form className="admin-form admin-content-form" onSubmit={handleContentSubmit}>
               <div className="admin-form-heading">
                 <h2>{editingContentId ? 'Cập nhật nội dung' : 'Tạo nội dung mới'}</h2>
                 <p>Quản lý bài học, câu hỏi và trò chơi AI cho trẻ.</p>
               </div>
-              <input required placeholder="Tiêu đề" value={contentForm.title} onChange={(e) => setContentForm({ ...contentForm, title: e.target.value })} />
+              <AdminField label="Tiêu đề nội dung" hint="Tên sẽ hiển thị trong danh sách quản trị và các màn học/chơi của trẻ.">
+                <input required placeholder="Ví dụ: Con thích ăn gì" value={contentForm.title} onChange={(e) => setContentForm({ ...contentForm, title: e.target.value })} />
+              </AdminField>
+
               <div className="admin-form-row">
-                <select value={contentForm.type} onChange={(e) => setContentForm({ ...contentForm, type: e.target.value })}>
-                  <option value="GAME">Trò chơi</option>
-                  <option value="QUIZ">Câu hỏi</option>
-                  <option value="LECTURE">Bài học</option>
-                </select>
-                <select value={contentForm.status} onChange={(e) => setContentForm({ ...contentForm, status: e.target.value })}>
-                  <option value="PUBLISHED">Đã xuất bản</option>
-                  <option value="DRAFT">Bản nháp</option>
-                </select>
+                <AdminField label="Loại nội dung" hint="Chọn đúng loại để hệ thống mở các trường dữ liệu phù hợp.">
+                  <select value={contentForm.type} onChange={(e) => handleContentTypeChange(e.target.value)}>
+                    <option value="GAME">Trò chơi</option>
+                    <option value="QUIZ">Câu hỏi</option>
+                    <option value="LECTURE">Bài học</option>
+                  </select>
+                </AdminField>
+                <AdminField label="Trạng thái" hint="Bản nháp chưa hiển thị cho trẻ; đã xuất bản thì trẻ có thể thấy.">
+                  <select value={contentForm.status} onChange={(e) => setContentForm({ ...contentForm, status: e.target.value })}>
+                    <option value="PUBLISHED">Đã xuất bản</option>
+                    <option value="DRAFT">Bản nháp</option>
+                  </select>
+                </AdminField>
               </div>
-              <textarea placeholder="Mô tả" value={contentForm.description} onChange={(e) => setContentForm({ ...contentForm, description: e.target.value })} />
+
+              <AdminField
+                label={contentForm.type === 'QUIZ' ? 'Nội dung câu hỏi / mô tả' : 'Mô tả hiển thị'}
+                hint={contentForm.type === 'GAME' ? 'Mô tả tình huống hoặc yêu cầu của trò chơi.' : 'Viết câu mô tả ngắn để trẻ hiểu nội dung cần làm.'}
+              >
+                <textarea placeholder="Ví dụ: Hãy chọn bạn đang vui" value={contentForm.description} onChange={(e) => setContentForm({ ...contentForm, description: e.target.value })} />
+              </AdminField>
+
               <div className="admin-media-field">
-                <input placeholder="Đường dẫn media hoặc prompt" value={contentForm.mediaUrl} onChange={(e) => setContentForm({ ...contentForm, mediaUrl: e.target.value })} />
-                <label className={`admin-upload-control ${mediaUploading ? 'disabled' : ''}`}>
-                  <FiUpload aria-hidden="true" />
-                  {mediaUploading ? 'Đang tải...' : 'Chọn video / Tải lên'}
-                  <input
-                    type="file"
-                    accept="video/*,image/*"
-                    disabled={mediaUploading}
-                    onChange={handleContentMediaUpload}
-                  />
-                </label>
+                <AdminField
+                  label={contentForm.type === 'GAME' ? 'Đường dẫn ảnh/video prompt' : 'Đường dẫn media'}
+                  hint="Có thể nhập URL, storage key sau khi tải lên, hoặc để trống nếu nội dung không cần media."
+                >
+                  <input placeholder="Ví dụ: media/quiz-happy.png" value={contentForm.mediaUrl} onChange={(e) => setContentForm({ ...contentForm, mediaUrl: e.target.value })} />
+                </AdminField>
+                <AdminField label="Tải media từ máy" hint="Chọn ảnh hoặc video, hệ thống sẽ điền đường dẫn vào ô bên trái.">
+                  <label className={`admin-upload-control ${mediaUploading ? 'disabled' : ''}`}>
+                    <FiUpload aria-hidden="true" />
+                    {mediaUploading ? 'Đang tải...' : 'Chọn video / Tải lên'}
+                    <input
+                      type="file"
+                      accept="video/*,image/*"
+                      disabled={mediaUploading}
+                      onChange={handleContentMediaUpload}
+                    />
+                  </label>
+                </AdminField>
               </div>
+
               <div className="admin-form-row">
-                <input type="number" min="1" max="3" placeholder="Độ khó" value={contentForm.difficultyLevel} onChange={(e) => setContentForm({ ...contentForm, difficultyLevel: e.target.value })} />
+                <AdminField label="Độ khó" hint="Nhập 1, 2 hoặc 3.">
+                  <input type="number" min="1" max="3" value={contentForm.difficultyLevel} onChange={(e) => setContentForm({ ...contentForm, difficultyLevel: e.target.value })} />
+                </AdminField>
                 {contentForm.type === 'GAME' && (
-                  <input type="number" min="0" placeholder="Sao mở khóa" value={contentForm.unlockStarCost} onChange={(e) => setContentForm({ ...contentForm, unlockStarCost: e.target.value })} />
+                  <AdminField label="Sao mở khóa" hint="Số sao trẻ cần có để mở trò chơi này. Nhập 0 nếu miễn phí.">
+                    <input type="number" min="0" value={contentForm.unlockStarCost} onChange={(e) => setContentForm({ ...contentForm, unlockStarCost: e.target.value })} />
+                  </AdminField>
                 )}
               </div>
+
               {contentForm.type === 'QUIZ' && (
-                <>
-                  <input placeholder="Đáp án, cách nhau bởi dấu phẩy" value={contentForm.answerEmotions} onChange={(e) => setContentForm({ ...contentForm, answerEmotions: e.target.value })} />
-                  <input placeholder="Đáp án đúng" value={contentForm.correctEmotion} onChange={(e) => setContentForm({ ...contentForm, correctEmotion: e.target.value })} />
-                </>
+                <div className="admin-form-group">
+                  <div className="admin-form-group-title">Cấu hình câu hỏi</div>
+                  <AdminField label="Các đáp án cảm xúc" hint="Nhập mã cảm xúc, cách nhau bằng dấu phẩy. Ví dụ: JOY,SAD,ANGRY,CALM.">
+                    <input placeholder="JOY,SAD,ANGRY,CALM" value={contentForm.answerEmotions} onChange={(e) => setContentForm({ ...contentForm, answerEmotions: e.target.value })} />
+                  </AdminField>
+                  <AdminField label="Đáp án đúng" hint="Phải trùng với một mã trong danh sách đáp án phía trên.">
+                    <input placeholder="Ví dụ: JOY" value={contentForm.correctEmotion} onChange={(e) => setContentForm({ ...contentForm, correctEmotion: e.target.value })} />
+                  </AdminField>
+                </div>
               )}
+
               {contentForm.type === 'GAME' && (
-                <div className="admin-form-row">
-                  <input placeholder="Cảm xúc mục tiêu" value={contentForm.targetEmotion} onChange={(e) => setContentForm({ ...contentForm, targetEmotion: e.target.value })} />
-                  <input type="number" min="1" placeholder="Thời lượng giới hạn" value={contentForm.timeLimitSeconds} onChange={(e) => setContentForm({ ...contentForm, timeLimitSeconds: e.target.value })} />
+                <div className="admin-form-group">
+                  <div className="admin-form-group-title">Cấu hình trò chơi AI</div>
+                  <AdminField label="Loại game" hint="Game 1 dùng câu hỏi văn bản và ảnh đáp án; Game 2 dùng ảnh tình huống và ảnh đáp án.">
+                    <select value={contentForm.gameKind} onChange={(e) => handleGameKindChange(e.target.value)}>
+                      <option value="CHOOSE_EMOTION">Game 1 - Chọn cảm xúc đúng</option>
+                      <option value="CHOOSE_REACTION">Game 2 - Chọn cách phản ứng</option>
+                      <option value="MATCH_EMOTION">Game 3 - Biểu cảm đúng</option>
+                    </select>
+                  </AdminField>
+
+                  {contentForm.gameKind !== 'MATCH_EMOTION' && (
+                    <AdminField
+                      label={contentForm.gameKind === 'CHOOSE_REACTION' ? 'Câu hỏi / lời dẫn dưới ảnh' : 'Câu hỏi game 1'}
+                      hint={contentForm.gameKind === 'CHOOSE_REACTION' ? 'Ví dụ: Bạn bị ngã rồi. Con sẽ làm gì?' : 'Ví dụ: Ai đang BUỒN vậy con?'}
+                    >
+                      <input
+                        placeholder={contentForm.gameKind === 'CHOOSE_REACTION' ? 'Bạn bị ngã rồi. Con sẽ làm gì?' : 'Ai đang BUỒN vậy con?'}
+                        value={contentForm.gameQuestion}
+                        onChange={(e) => setContentForm({ ...contentForm, gameQuestion: e.target.value })}
+                      />
+                    </AdminField>
+                  )}
+
+                  {contentForm.gameKind === 'CHOOSE_REACTION' && (
+                    <div className="admin-game-prompt-field">
+                      <div className="admin-game-prompt-preview">
+                        {contentForm.gamePromptPreviewUrl || contentForm.gamePromptImageUrl
+                          ? <img src={contentForm.gamePromptPreviewUrl || contentForm.gamePromptImageUrl} alt="Ảnh câu hỏi Game 2" />
+                          : <span>🖼️</span>}
+                      </div>
+                      <AdminField label="Ảnh câu hỏi / tình huống" hint="Ảnh lớn ở phía trên Game 2. Có thể nhập URL hoặc tải ảnh lên.">
+                        <input
+                          placeholder="Ví dụ: https://.../ban-bi-nga.png"
+                          value={contentForm.gamePromptImageUrl}
+                          onChange={(e) => setContentForm({ ...contentForm, gamePromptImageUrl: e.target.value, gamePromptPreviewUrl: e.target.value })}
+                        />
+                      </AdminField>
+                      <AdminField label="Tải ảnh câu hỏi">
+                        <label className={`admin-upload-control ${mediaUploading ? 'disabled' : ''}`}>
+                          <FiUpload aria-hidden="true" />
+                          Tải ảnh
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={mediaUploading}
+                            onChange={(event) => handleGameConfigImageUpload(event, { type: 'prompt' })}
+                          />
+                        </label>
+                      </AdminField>
+                    </div>
+                  )}
+
+                  {contentForm.gameKind !== 'MATCH_EMOTION' && (
+                    <div className="admin-game-options-editor">
+                      <div className="admin-game-options-heading">
+                        <strong>{contentForm.gameKind === 'CHOOSE_REACTION' ? 'Ảnh câu trả lời Game 2' : 'Ảnh minh họa đáp án Game 1'}</strong>
+                        <span>{contentForm.gameKind === 'CHOOSE_REACTION' ? 'Chọn một hoặc nhiều đáp án đúng.' : 'Chọn một đáp án đúng.'}</span>
+                      </div>
+                      {normalizeGameOptions(contentForm.gameKind, contentForm.gameOptions).map((option, index) => (
+                        <div className="admin-game-option-card" key={`${contentForm.gameKind}-${index}`}>
+                          <div className="admin-game-option-preview">
+                            {option.previewUrl || option.imageUrl
+                              ? <img src={option.previewUrl || option.imageUrl} alt={option.label} />
+                              : <span>{option.src || '🖼️'}</span>}
+                          </div>
+                          <div className="admin-game-option-fields">
+                            <AdminField label={`Tên đáp án ${index + 1}`}>
+                              <input value={option.label} onChange={(e) => updateGameOption(index, { label: e.target.value })} />
+                            </AdminField>
+                            <AdminField label={contentForm.gameKind === 'CHOOSE_REACTION' ? 'Mã phản ứng' : 'Mã cảm xúc'}>
+                              <input
+                                value={contentForm.gameKind === 'CHOOSE_REACTION' ? option.value : option.emotion}
+                                onChange={(e) => updateGameOption(index, contentForm.gameKind === 'CHOOSE_REACTION'
+                                  ? { value: e.target.value }
+                                  : { emotion: e.target.value, value: e.target.value })}
+                              />
+                            </AdminField>
+                            <AdminField label="URL ảnh">
+                              <input value={option.imageUrl} placeholder="Dán URL ảnh minh họa" onChange={(e) => updateGameOption(index, { imageUrl: e.target.value, previewUrl: e.target.value })} />
+                            </AdminField>
+                            <AdminField label="Emoji dự phòng">
+                              <input value={option.src} onChange={(e) => updateGameOption(index, { src: e.target.value })} />
+                            </AdminField>
+                          </div>
+                          <div className="admin-game-option-actions">
+                            <label className={`admin-upload-control ${mediaUploading ? 'disabled' : ''}`}>
+                              <FiUpload aria-hidden="true" />
+                              Tải ảnh
+                              <input
+                                type="file"
+                                accept="image/*"
+                                disabled={mediaUploading}
+                                onChange={(event) => handleGameConfigImageUpload(event, { type: 'option', index })}
+                              />
+                            </label>
+                            <label className="admin-game-correct-toggle">
+                              <input
+                                type={contentForm.gameKind === 'CHOOSE_REACTION' ? 'checkbox' : 'radio'}
+                                name="game-correct-answer"
+                                checked={contentForm.gameKind === 'CHOOSE_REACTION'
+                                  ? contentForm.gameCorrectIndexes.includes(index)
+                                  : Number(contentForm.gameCorrectIndex) === index}
+                                onChange={() => {
+                                  if (contentForm.gameKind === 'CHOOSE_REACTION') {
+                                    toggleGameCorrectIndex(index)
+                                  } else {
+                                    setContentForm({ ...contentForm, gameCorrectIndex: index })
+                                  }
+                                }}
+                              />
+                              Đáp án đúng
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="admin-form-row">
+                    <AdminField label="Cảm xúc mục tiêu" hint="Mã cảm xúc backend dùng để chấm. Ví dụ: JOY, SAD, ANGRY, CALM.">
+                      <input placeholder="Ví dụ: JOY" value={contentForm.targetEmotion} onChange={(e) => setContentForm({ ...contentForm, targetEmotion: e.target.value })} />
+                    </AdminField>
+                    <AdminField label="Thời lượng giới hạn" hint="Số giây tối đa cho lượt chơi.">
+                      <input type="number" min="1" value={contentForm.timeLimitSeconds} onChange={(e) => setContentForm({ ...contentForm, timeLimitSeconds: e.target.value })} />
+                    </AdminField>
+                  </div>
                 </div>
               )}
               <div className="admin-form-actions">
@@ -576,8 +923,8 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === 'pets' && (
-          <section className="admin-section split">
-            <form className="admin-form" onSubmit={handlePetSubmit}>
+          <section className="admin-section pet-management">
+            <form className="admin-form admin-pet-form" onSubmit={handlePetSubmit}>
               <div className="admin-form-heading">
                 <h2>{editingPetId ? 'Cập nhật pet' : 'Tạo pet mới'}</h2>
                 <p>Cấu hình vật phẩm đổi sao trong cửa hàng.</p>

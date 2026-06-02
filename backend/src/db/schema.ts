@@ -374,6 +374,10 @@ export const game = pgTable(
     unlockStarCost: integer("unlock_star_cost").default(0).notNull(),
     promptAssetType: text("prompt_asset_type"),
     promptAssetUrl: text("prompt_asset_url"),
+    config: jsonb("config")
+      .$type<Record<string, unknown>>()
+      .default(sql`'{}'::jsonb`)
+      .notNull(),
   },
   (table) => [
     foreignKey({

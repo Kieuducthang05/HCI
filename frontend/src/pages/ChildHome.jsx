@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { getSelectedChild } from '../services/api';
 
 // --- CÁC ICON SVG ---
 const CoinIcon = () => (
@@ -33,12 +34,17 @@ const GamepadIcon = () => (
   </svg>
 );
 
-const EmotionIcon = () => (
+const QuestionIcon = () => (
   <svg width="45" height="45" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="50" r="36" fill="#77BFA3" />
-    <circle cx="38" cy="43" r="5" fill="#FFFFFF" />
-    <circle cx="62" cy="43" r="5" fill="#FFFFFF" />
-    <path d="M35 60 Q50 72 65 60" fill="none" stroke="#FFFFFF" strokeWidth="6" strokeLinecap="round" />
+    <circle cx="50" cy="50" r="36" fill="#B7EAD9" />
+    <path
+      d="M39 39C40.8 30.5 48.1 26 56.2 28.3C63.1 30.3 67.1 36.3 65.6 43.1C64.6 47.7 61.5 50.7 57.5 53.2C53.7 55.6 52.5 57.8 52.5 62.5"
+      fill="none"
+      stroke="#477064"
+      strokeLinecap="round"
+      strokeWidth="8"
+    />
+    <circle cx="52.5" cy="73" r="5" fill="#477064" />
   </svg>
 );
 
@@ -107,6 +113,9 @@ const ActionCard = ({ title, borderColor, bgColor, textColor, icon, onClick }) =
 // --- COMPONENT CHÍNH ---
 export default function ChildHome() {
   const navigate = useNavigate();
+  const outletContext = useOutletContext();
+  const selectedChild = getSelectedChild();
+  const starCount = Number(outletContext?.userStars ?? selectedChild?.total_stars ?? 0);
   // Giữ lại state nếu sau này bạn muốn thay đổi câu chào linh hoạt
   const [greeting] = useState('Hôm nay con muốn làm gì?');
 
@@ -141,7 +150,7 @@ export default function ChildHome() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FCEDC9', padding: '6px 16px', borderRadius: '20px' }}>
             <CoinIcon />
-            <span style={{ color: '#DCA846', fontWeight: 'bold', fontSize: '16px' }}>120</span>
+            <span style={{ color: '#DCA846', fontWeight: 'bold', fontSize: '16px' }}>{starCount}</span>
           </div>
           {/* Nút X: Tôi set cho nó chức năng quay lại trang trước (Go back) */}
           <button 
@@ -183,15 +192,15 @@ export default function ChildHome() {
             onClick={() => handleActivityClick('games')} 
           />
           <ActionCard
-            title="Cảm xúc của con"
+            title="Câu hỏi"
             borderColor="#77BFA3"
             bgColor="#EAF7F0"
             textColor="#34765F"
-            icon={<EmotionIcon />}
-            onClick={() => handleActivityClick('emotion')}
+            icon={<QuestionIcon />}
+            onClick={() => handleActivityClick('questions')}
           />
           <ActionCard 
-            title="Trò chuyện cùng Bạn Thỏ" 
+            title="Bạn Thỏ" 
             borderColor="#D1969D" 
             bgColor="#FCEEF0" 
             textColor="#D1969D" 

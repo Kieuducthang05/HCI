@@ -32,8 +32,18 @@ export type UpdateAdminContentInput = {
     unlockStarCost?: number;
     promptAssetType?: string | null;
     promptAssetUrl?: string | null;
+    config?: Record<string, unknown> | null;
   };
 };
+
+function normalizeGameConfig(config: unknown): Record<string, unknown> {
+  if (config === undefined || config === null) return {};
+  if (typeof config !== "object" || Array.isArray(config)) {
+    throw new AppError("INVALID_GAME_CONFIG", "Game config must be an object.", 400);
+  }
+
+  return config as Record<string, unknown>;
+}
 
 export async function updateAdminContent(input: UpdateAdminContentInput): Promise<ContentResult> {
   const adminId = normalizeAdminId(input.adminId);
@@ -164,6 +174,9 @@ export async function updateAdminContent(input: UpdateAdminContentInput): Promis
     }
     if (input.game.promptAssetUrl !== undefined) {
       typeData.promptAssetUrl = input.game.promptAssetUrl ? input.game.promptAssetUrl.trim() : null;
+    }
+    if (input.game.config !== undefined) {
+      typeData.config = normalizeGameConfig(input.game.config);
     }
   }
 

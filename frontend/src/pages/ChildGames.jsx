@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
-import { contentApi, getSelectedChild, setSelectedChild } from '../services/api'
+import { contentApi, getSelectedChild, setSelectedChild, trackingApi } from '../services/api'
+import { captureDetectedFace } from '../utils/faceCapture'
 import '../styles/Child.css'
 
 const gameContentKeys = {
@@ -31,6 +32,96 @@ function findGameContent(contents, gameId, index) {
     || null
 }
 
+function getGameConfig(content) {
+  return content?.game?.config && typeof content.game.config === 'object' ? content.game.config : {}
+}
+
+function isMediaSource(value) {
+  return /^(https?:|blob:|data:|\/|media-assets\/)/i.test(String(value || '').trim())
+}
+
+function getConfiguredGameKind(content) {
+  const kind = String(getGameConfig(content).kind || '').trim().toUpperCase()
+  if (kind === 'CHOOSE_EMOTION' || kind === 'CHOOSE_REACTION' || kind === 'MATCH_EMOTION') return kind
+
+  const title = normalize(content?.title)
+  if (title.includes('choose-emotion')) return 'CHOOSE_EMOTION'
+  if (title.includes('choose-reaction')) return 'CHOOSE_REACTION'
+  if (title.includes('match-emotion')) return 'MATCH_EMOTION'
+  return ''
+}
+
+function toConfiguredChooseEmotionGame(content) {
+  if (getConfiguredGameKind(content) !== 'CHOOSE_EMOTION') return null
+
+  const config = getGameConfig(content)
+  const options = Array.isArray(config.options) ? config.options : []
+  if (!options.length) return null
+
+  const correctAnswer = Number.isInteger(config.correctIndex) ? config.correctIndex : 0
+  const correctOption = options[correctAnswer] || options[0] || {}
+  const targetEmotion = String(correctOption.emotion || content.game?.target_emotion || 'JOY').toUpperCase()
+  const targetLabel = String(correctOption.label || targetEmotion)
+
+  return {
+    content,
+    emotion: targetLabel.toUpperCase(),
+    question: String(config.question || `Ai đang {emotion} vậy con?`),
+    description: String(config.description || 'Hãy chạm vào bức ảnh đúng nhé!'),
+    images: options.map((option, index) => ({
+      src: option.imageUrl || option.src || '🙂',
+      imageUrl: option.imageUrl || '',
+      label: option.label || `Đáp án ${index + 1}`,
+      emotion: String(option.emotion || option.value || '').toUpperCase(),
+      color: '#f6c45f',
+    })),
+    correctAnswer,
+    explanation: `${targetLabel} là đáp án đúng.`,
+  }
+}
+
+function toConfiguredChooseReactionGame(content) {
+  if (getConfiguredGameKind(content) !== 'CHOOSE_REACTION') return null
+
+  const config = getGameConfig(content)
+  const options = Array.isArray(config.options) ? config.options : []
+  if (!options.length) return null
+
+  return {
+    content,
+    scenario: String(config.promptImageUrl || content.game?.prompt_asset_url || '🤝'),
+    promptImageUrl: String(config.promptImageUrl || content.game?.prompt_asset_url || ''),
+    prompt: String(config.question || content.title || 'Con sẽ làm gì?'),
+    reactions: options.map((option, index) => option.label || `Đáp án ${index + 1}`),
+    reactionOptions: options.map((option, index) => ({
+      label: option.label || `Đáp án ${index + 1}`,
+      value: option.value || option.emotion || `OPTION_${index + 1}`,
+      imageUrl: option.imageUrl || '',
+      src: option.src || '🙂',
+    })),
+    reactionVisuals: options.map((option) => normalize(option.value || option.label || 'comfort')),
+    correctAnswers: Array.isArray(config.correctIndexes) && config.correctIndexes.length
+      ? config.correctIndexes.map((item) => Number(item)).filter((item) => Number.isInteger(item))
+      : [0],
+    explanation: 'Con hãy chọn cách phản ứng phù hợp với tình huống.',
+  }
+}
+
+function buildConfiguredGames(contents) {
+  return contents.reduce((result, content) => {
+    const emotionGame = toConfiguredChooseEmotionGame(content)
+    if (emotionGame) result.chooseEmotion.push(emotionGame)
+
+    const reactionGame = toConfiguredChooseReactionGame(content)
+    if (reactionGame) result.chooseReaction.push(reactionGame)
+
+    return result
+  }, {
+    chooseEmotion: [],
+    chooseReaction: [],
+  })
+}
+
 function nowMs() {
   return Date.now()
 }
@@ -41,6 +132,33 @@ function makeSessionKey(gameId, questionIndex) {
   }
 
   return `${gameId}-${questionIndex}-${nowMs()}`
+}
+
+const modelEmotionMap = {
+  happy: { uiId: 'JOY', label: 'Vui vẻ', icon: '😊' },
+  sad: { uiId: 'SAD', label: 'Buồn', icon: '😢' },
+  angry: { uiId: 'ANGRY', label: 'Tức giận', icon: '😠' },
+  fear: { uiId: 'SCARED', label: 'Sợ', icon: '😟' },
+  neutral: { uiId: 'CALM', label: 'Bình tĩnh', icon: '😌' },
+}
+
+function getModelEmotionInfo(value) {
+  const key = String(value || '').trim().toLowerCase()
+  return modelEmotionMap[key] || {
+    uiId: 'CALM',
+    label: value || 'Không xác định',
+    icon: '🙂',
+  }
+}
+
+async function captureVideoFrame(video) {
+  const captured = await captureDetectedFace(video, { filenamePrefix: 'game-expression-face' })
+
+  if (!captured.ok) {
+    throw new Error(captured.message)
+  }
+
+  return captured.file
 }
 
 const chooseEmotionGames = [
@@ -88,19 +206,28 @@ const chooseEmotionGames = [
 const chooseReactionGames = [
   {
     scenario: '👦 Bạn bị ngã xuống đất',
-    reactions: ['Bỏ đi', 'Cười', 'An ủi', 'Gọi bố mẹ'],
-    correctAnswers: [2, 3],
-    explanation: 'Con nên an ủi hoặc gọi bố mẹ để giúp bạn.',
+    prompt: 'Bạn bị ngã rồi. Con sẽ làm gì?',
+    scene: 'fall',
+    reactions: ['Bỏ đi', 'Cười', 'An ủi'],
+    reactionVisuals: ['leave', 'laugh', 'comfort'],
+    correctAnswers: [2],
+    explanation: 'Con nên an ủi để giúp bạn cảm thấy tốt hơn.',
   },
   {
     scenario: '🎂 Mẹ vừa mua bánh sinh nhật cho bé',
-    reactions: ['Chạy đi', 'Vui lên', 'Ôm mẹ', 'Nằm yên'],
+    prompt: 'Mẹ tặng bánh sinh nhật. Con sẽ làm gì?',
+    scene: 'birthday',
+    reactions: ['Chạy đi', 'Vui lên', 'Ôm mẹ'],
+    reactionVisuals: ['leave', 'smile', 'hug'],
     correctAnswers: [1, 2],
     explanation: 'Con có thể vui lên và ôm mẹ để cảm ơn.',
   },
   {
     scenario: '😢 Bạn bị ai đó làm tổn thương',
-    reactions: ['Đánh lại', 'Nói chuyện với người lớn', 'Khóc', 'Bất chấp'],
+    prompt: 'Bạn đang buồn. Con sẽ phản ứng thế nào?',
+    scene: 'support',
+    reactions: ['Đánh lại', 'Nói với người lớn', 'An ủi'],
+    reactionVisuals: ['angry', 'adult', 'comfort'],
     correctAnswers: [1, 2],
     explanation: 'Con nên nói chuyện với người lớn để được giúp đỡ.',
   },
@@ -108,28 +235,31 @@ const chooseReactionGames = [
 
 const matchEmotionGames = [
   {
-    description: 'Khi bé chơi với bạn',
+    description: 'Làm nụ cười thật tươi để vượt qua thử thách này.',
+    instruction: 'Mỉm cười giống biểu cảm này nhé!',
     emotion: 'JOY',
     label: 'Vui vẻ',
-    correctEmoji: '😊',
-    options: ['😊', '😢', '😡', '😨'],
+    emoji: '😊',
+    modelEmotion: 'happy',
     explanation: 'Khi chơi với bạn, bé thường cảm thấy vui vẻ.',
   },
   {
-    description: 'Khi bé mất đồ chơi yêu thích',
+    description: 'Thử làm khuôn mặt buồn như khi mất món đồ yêu thích.',
+    instruction: 'Làm biểu cảm buồn giống mẫu nhé!',
     emotion: 'SAD',
     label: 'Buồn',
-    correctEmoji: '😢',
-    options: ['😊', '😢', '😌', '😡'],
+    emoji: '😢',
+    modelEmotion: 'sad',
     explanation: 'Khi mất món đồ mình thích, bé có thể thấy buồn.',
   },
   {
-    description: 'Khi bé không được làm điều mình muốn',
-    emotion: 'ANGRY',
-    label: 'Tức giận',
-    correctEmoji: '😡',
-    options: ['😊', '😡', '😨', '😌'],
-    explanation: 'Khi không được điều mình muốn, bé có thể tức giận.',
+    description: 'Mở mắt và miệng giống biểu cảm sợ/ngạc nhiên để model nhận diện.',
+    instruction: 'Mở to mắt và miệng như bạn nhỏ trong hình để vượt qua thử thách này.',
+    emotion: 'SCARED',
+    label: 'Sợ',
+    emoji: '😟',
+    modelEmotion: 'fear',
+    explanation: 'Model hiện hỗ trợ nhãn gần nhất là cảm xúc sợ.',
   },
 ]
 
@@ -137,6 +267,136 @@ const games = {
   chooseEmotion: chooseEmotionGames,
   chooseReaction: chooseReactionGames,
   matchEmotion: matchEmotionGames,
+}
+
+function formatGameScore(value) {
+  return Number(value || 0).toLocaleString('vi-VN')
+}
+
+function getEmotionTone(emotion) {
+  const key = normalize(emotion)
+  return {
+    joy: 'happy',
+    happy: 'happy',
+    sad: 'sad',
+    angry: 'angry',
+    calm: 'calm',
+    neutral: 'calm',
+    scared: 'surprised',
+    fear: 'surprised',
+    surprised: 'surprised',
+  }[key] || 'happy'
+}
+
+function GamePlayTopbar({ onBack, score, scoreLabel = '' }) {
+  return (
+    <div className="game-screen-topbar">
+      <button className="game-screen-back" onClick={onBack} aria-label="Quay lại">
+        ←
+      </button>
+      <div className={`game-screen-score ${scoreLabel ? 'has-label' : ''}`}>
+        <span className="game-screen-score-icon" aria-hidden="true">★</span>
+        {scoreLabel && <span className="game-screen-score-label">{scoreLabel}</span>}
+        <strong>{formatGameScore(score)}</strong>
+      </div>
+    </div>
+  )
+}
+
+function GameStepProgress({ currentIndex, total }) {
+  return (
+    <div className="game-step-progress" aria-label={`Question ${currentIndex + 1}/${total}`}>
+      <div className="game-step-dashes">
+        {Array.from({ length: total }).map((_, index) => (
+          <span key={index} className={index <= currentIndex ? 'active' : ''}></span>
+        ))}
+      </div>
+      <span>QUESTION {currentIndex + 1}/{total}</span>
+    </div>
+  )
+}
+
+function EmotionPortrait({ imageData }) {
+  const tone = getEmotionTone(imageData.emotion)
+  const imageSource = imageData.imageUrl || (isMediaSource(imageData.src) ? imageData.src : '')
+
+  if (imageSource) {
+    return (
+      <div className={`game1-photo game1-photo-${tone} has-real-image`}>
+        <img src={imageSource} alt={imageData.label} />
+      </div>
+    )
+  }
+
+  return (
+    <div className={`game1-photo game1-photo-${tone}`} aria-hidden="true">
+      <div className="game1-photo-light"></div>
+      <div className="game1-person">
+        <div className="game1-hair"></div>
+        <div className="game1-head">
+          <span>{imageData.src}</span>
+        </div>
+        <div className="game1-neck"></div>
+        <div className="game1-shirt"></div>
+      </div>
+    </div>
+  )
+}
+
+function ReactionScenarioArt({ data }) {
+  const promptImage = data.promptImageUrl || (isMediaSource(data.scenario) ? data.scenario : '')
+
+  return (
+    <div className={`reaction-scene-card reaction-scene-${data.scene || 'fall'}`}>
+      {promptImage ? (
+        <div className="reaction-scene-image-wrap">
+          <img src={promptImage} alt={data.prompt || data.scenario} />
+        </div>
+      ) : (
+        <div className="reaction-scene-visual" aria-hidden="true">
+          <div className="reaction-scene-child reaction-scene-child-left">
+            <span className="reaction-scene-face">😢</span>
+            <span className="reaction-scene-body"></span>
+          </div>
+          <div className="reaction-scene-child reaction-scene-child-right">
+            <span className="reaction-scene-face">😟</span>
+            <span className="reaction-scene-body"></span>
+          </div>
+          <span className="reaction-scene-accent reaction-scene-accent-one"></span>
+          <span className="reaction-scene-accent reaction-scene-accent-two"></span>
+        </div>
+      )}
+      <h2>{data.prompt || data.scenario}</h2>
+    </div>
+  )
+}
+
+function ReactionChoiceArt({ option = {}, variant = 'comfort' }) {
+  const imageSource = option.imageUrl || (isMediaSource(option.src) ? option.src : '')
+
+  if (imageSource) {
+    return (
+      <div className="reaction-choice-art has-real-image" aria-hidden="true">
+        <img src={imageSource} alt="" />
+      </div>
+    )
+  }
+
+  if (option.src) {
+    return (
+      <div className="reaction-choice-art has-emoji" aria-hidden="true">
+        <span>{option.src}</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`reaction-choice-art reaction-choice-${variant}`} aria-hidden="true">
+      <span className="reaction-choice-figure"></span>
+      <span className="reaction-choice-face"></span>
+      <span className="reaction-choice-detail"></span>
+    </div>
+  )
 }
 
 const gameOptions = [
@@ -154,15 +414,15 @@ const gameOptions = [
   },
   {
     id: 'matchEmotion',
-    title: '🎭 Ghép cảm xúc',
-    description: 'Khớp cảm xúc với tình huống',
+    title: '🎭 Biểu cảm đúng',
+    description: 'Làm theo biểu cảm để model kiểm tra',
     icon: '🎭',
   },
 ]
 
 export default function ChildGames() {
   const navigate = useNavigate()
-  const { setUserStars } = useOutletContext()
+  const { userStars, setUserStars } = useOutletContext()
   const selectedChild = getSelectedChild()
   const [currentGame, setCurrentGame] = useState(null)
   const [score, setScore] = useState(0)
@@ -188,10 +448,20 @@ export default function ChildGames() {
       })
   }, [selectedChild?.id])
 
+  const configuredGames = useMemo(() => buildConfiguredGames(gameContents), [gameContents])
+  const activeGameList = useMemo(() => (
+    currentGame
+      ? (configuredGames[currentGame]?.length ? configuredGames[currentGame] : games[currentGame])
+      : []
+  ), [configuredGames, currentGame])
   const selectedContent = useMemo(
-    () => (currentGame ? findGameContent(gameContents, currentGame, gameIndex) : null),
-    [currentGame, gameContents, gameIndex],
+    () => {
+      if (!currentGame) return null
+      return activeGameList[gameIndex]?.content || findGameContent(gameContents, currentGame, gameIndex)
+    },
+    [currentGame, activeGameList, gameContents, gameIndex],
   )
+  const displayStars = userStars ?? selectedChild?.total_stars ?? 0
 
   const startGame = (gameId) => {
     setCurrentGame(gameId)
@@ -210,7 +480,7 @@ export default function ChildGames() {
   }
 
   const getFeedbackInfo = () => {
-    const currentGameData = games[currentGame][gameIndex]
+    const currentGameData = activeGameList[gameIndex]
 
     if (currentGame === 'chooseEmotion') {
       return {
@@ -258,7 +528,14 @@ export default function ChildGames() {
     }
   }
 
-  const recordGameSession = async ({ content, selectedEmotion }) => {
+  const recordGameSession = async ({
+    content,
+    selectedEmotion,
+    aiDetectedEmotion,
+    aiConfidence,
+    aiMatchScore,
+    isCorrect = true,
+  }) => {
     if (!selectedChild?.id || !content) return { starsEarned: 0 }
 
     const unlocked = await ensureContentUnlocked(content)
@@ -278,11 +555,11 @@ export default function ChildGames() {
         status: 'COMPLETED',
         started_at: startedAt,
         completed_at: completedAt,
-        is_correct: true,
+        is_correct: isCorrect,
         selected_emotion: selectedEmotion,
-        ai_match_score: 1,
-        ai_detected_emotion: targetEmotion,
-        ai_confidence: 1,
+        ai_match_score: aiMatchScore ?? (isCorrect ? 1 : 0),
+        ai_detected_emotion: aiDetectedEmotion || targetEmotion,
+        ai_confidence: aiConfidence ?? (isCorrect ? 1 : 0),
         metadata: {
           local_game_id: currentGame,
           local_question_index: gameIndex,
@@ -297,7 +574,7 @@ export default function ChildGames() {
     }
   }
 
-  const handleGameAnswer = async (isCorrect, selectedEmotion) => {
+  const handleGameAnswer = async (isCorrect, selectedEmotion, modelResult = {}) => {
     if (feedback) return
 
     let starsEarned = 0
@@ -305,6 +582,7 @@ export default function ChildGames() {
       const result = await recordGameSession({
         content: selectedContent,
         selectedEmotion,
+        ...modelResult,
       })
       starsEarned = result.starsEarned
     }
@@ -321,14 +599,14 @@ export default function ChildGames() {
   }
 
   const handleContinueFeedback = () => {
-    const isLastQuestion = gameIndex >= games[currentGame].length - 1
+    const isLastQuestion = gameIndex >= activeGameList.length - 1
     const scoreAfterAnswer = feedback?.scoreAfterAnswer ?? score
 
     setFeedback(null)
 
     if (isLastQuestion) {
       setScore(scoreAfterAnswer)
-      setGameIndex(games[currentGame].length)
+      setGameIndex(activeGameList.length)
       return
     }
 
@@ -364,30 +642,22 @@ export default function ChildGames() {
     )
   }
 
-  const currentGameData = games[currentGame][gameIndex]
-  const isGameComplete = gameIndex >= games[currentGame].length
+  const currentGameData = activeGameList[gameIndex]
+  const isGameComplete = gameIndex >= activeGameList.length
   const feedbackOverlay = feedback && (
     feedback.isCorrect ? (
       <CorrectAnswer
-        emotion={feedback.emotion}
-        score={`${feedback.scoreAfterAnswer} ⭐`}
-        title="Đúng rồi!"
-        continueLabel={gameIndex < games[currentGame].length - 1 ? 'Tiếp tục →' : 'Xem kết quả →'}
-        messages={[
-          feedback.starsEarned > 0
-            ? `Backend đã cộng ${feedback.starsEarned} sao cho bé.`
-            : 'Bé đã chọn chính xác. Câu này không cộng thêm sao vì đã nhận thưởng trước đó hoặc chưa có content.',
-          gameIndex < games[currentGame].length - 1
-            ? 'Cùng sang lượt tiếp theo nhé!'
-            : 'Cùng xem kết quả trò chơi nhé!',
-        ]}
+        resultType="question"
+        reward={feedback.starsEarned}
+        title="Hoàn thành xuất sắc!"
+        continueLabel={gameIndex < activeGameList.length - 1 ? 'Tiếp tục →' : 'Xem kết quả →'}
         onContinue={handleContinueFeedback}
       />
     ) : (
       <IncorrectAnswer
-        emotion={feedback.emotion}
+        resultType="question"
         title="Chưa đúng rồi!"
-        continueLabel={gameIndex < games[currentGame].length - 1 ? 'Tiếp tục →' : 'Xem kết quả →'}
+        continueLabel={gameIndex < activeGameList.length - 1 ? 'Tiếp tục →' : 'Xem kết quả →'}
         explanation={feedback.explanation}
         encouragement="Không sao, bé đã học thêm được một điều mới!"
         onContinue={handleContinueFeedback}
@@ -397,96 +667,89 @@ export default function ChildGames() {
 
   if (isGameComplete) {
     return (
-      <div className="game-complete">
-        <div className="complete-content">
-          <h2 className="complete-title">🎉 Hoàn thành!</h2>
-          <p className="complete-text">Backend đã ghi nhận số sao thưởng</p>
-          <div className="final-score">{score} ⭐</div>
-          <p className="encourage-text">Tuyệt vời lắm! Hãy tiếp tục học hỏi!</p>
-
-          <div className="complete-buttons">
-            <button className="play-again-btn" onClick={() => startGame(currentGame)}>Chơi lại</button>
-            <button className="go-menu-btn" onClick={backToMenu}>Quay lại menu</button>
-          </div>
-        </div>
-      </div>
+      <CorrectAnswer
+        resultType="game"
+        reward={score}
+        title="Hoàn thành xuất sắc!"
+        continueLabel="Tiếp tục →"
+        onContinue={backToMenu}
+      />
     )
   }
 
   if (currentGame === 'chooseEmotion') {
-    const parts = currentGameData.question.split('{emotion}')
+    const questionText = currentGameData.question || 'Ai đang {emotion} vậy con?'
+    const hasEmotionSlot = questionText.includes('{emotion}')
+    const parts = hasEmotionSlot ? questionText.split('{emotion}') : []
 
     return (
-      <div className="choose-emotion-game">
+      <div className="choose-emotion-game game-play-shell game1-shell">
         {feedbackOverlay}
-        <div className="game-header-new">
-          <button className="game-back-btn" onClick={backToMenu}>
-            <span>← Quay lại</span>
-          </button>
-          <div className="game-score-badge">
-            <span style={{ fontSize: '12px' }}>Score</span>
-            <span style={{ fontSize: '20px', fontWeight: 'bold' }}>{score}</span>
-          </div>
-        </div>
+        <GamePlayTopbar onBack={backToMenu} score={displayStars} scoreLabel="Score:" />
 
         <div className="choose-emotion-content">
-          <h2 className="question-title">
-            {parts[0]}
-            <span style={{ color: '#305196', fontWeight: 'bold' }}>{currentGameData.emotion}</span>
-            {parts[1]}
+          <h2 className="game1-title">
+            {hasEmotionSlot ? (
+              <>
+                {parts[0]}
+                <span>{currentGameData.emotion}</span>
+                {parts[1]}
+              </>
+            ) : questionText}
           </h2>
 
-          <p className="question-description">{currentGameData.description}</p>
+          <p className="game1-description">{currentGameData.description}</p>
 
-          <div className="emotion-grid">
+          <div className="game1-options-grid">
             {currentGameData.images.map((imageData, idx) => (
               <button
                 key={imageData.emotion}
-                className="emotion-card"
+                className="game1-option-card"
                 onClick={() => handleGameAnswer(
                   idx === currentGameData.correctAnswer,
                   currentGameData.images[currentGameData.correctAnswer].emotion,
                 )}
-                style={{ borderColor: imageData.color, backgroundColor: `${imageData.color}15` }}
+                aria-label={imageData.label}
               >
-                <div className="emotion-image" style={{ fontSize: '60px' }}>{imageData.src}</div>
+                <EmotionPortrait imageData={imageData} />
               </button>
             ))}
           </div>
 
-          <div className="progress-bar-container">
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: `${((gameIndex + 1) / games[currentGame].length) * 100}%` }}></div>
-            </div>
-            <span className="progress-text">QUESTION {gameIndex + 1}/{games[currentGame].length}</span>
-          </div>
+          <GameStepProgress currentIndex={gameIndex} total={activeGameList.length} />
         </div>
       </div>
     )
   }
 
   if (currentGame === 'chooseReaction') {
+    const reactionOptions = currentGameData.reactionOptions || currentGameData.reactions.map((reaction, index) => ({
+      label: reaction,
+      value: reaction,
+      imageUrl: '',
+      src: '',
+      variant: currentGameData.reactionVisuals?.[index],
+    }))
+
     return (
-      <div className="game-container">
+      <div className="game-play-shell game2-shell">
         {feedbackOverlay}
-        <div className="game-header">
-          <button className="game-back" onClick={backToMenu}>←</button>
-          <div className="game-score">⭐ {score}</div>
-        </div>
+        <GamePlayTopbar onBack={backToMenu} score={displayStars} />
 
-        <div className="scenario">{currentGameData.scenario}</div>
+        <ReactionScenarioArt data={currentGameData} />
 
-        <div className="reactions-grid">
-          {currentGameData.reactions.map((reaction, idx) => (
+        <div className="game2-reactions-grid">
+          {reactionOptions.map((reaction, idx) => (
             <button
-              key={reaction}
-              className="reaction-btn"
+              key={`${reaction.value || reaction.label}-${idx}`}
+              className="game2-reaction-card"
               onClick={() => handleGameAnswer(
                 currentGameData.correctAnswers.includes(idx),
                 gameContentFallback.chooseReaction,
               )}
             >
-              {reaction}
+              <ReactionChoiceArt option={reaction} variant={reaction.variant || currentGameData.reactionVisuals?.[idx]} />
+              <strong>{reaction.label}</strong>
             </button>
           ))}
         </div>
@@ -495,26 +758,180 @@ export default function ChildGames() {
   }
 
   return (
-    <div className="game-container">
+    <ExpressionGame
+      data={currentGameData}
+      score={score}
+      currentIndex={gameIndex}
+      total={activeGameList.length}
+      selectedChild={selectedChild}
+      feedbackOverlay={feedbackOverlay}
+      onBack={backToMenu}
+      onAnswer={handleGameAnswer}
+    />
+  )
+}
+
+function ExpressionGame({
+  data,
+  score,
+  currentIndex,
+  total,
+  selectedChild,
+  feedbackOverlay,
+  onBack,
+  onAnswer,
+}) {
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
+  const [isCameraOn, setIsCameraOn] = useState(false)
+  const [isScanning, setIsScanning] = useState(false)
+  const [cameraError, setCameraError] = useState('')
+  const [scanStatus, setScanStatus] = useState('Sẵn sàng nhận diện')
+
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach((track) => track.stop())
+    }
+  }, [])
+
+  const startCamera = async () => {
+    setCameraError('')
+    setScanStatus('Đang bật camera...')
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Trình duyệt hiện tại không hỗ trợ mở camera.')
+      setScanStatus('Chưa có camera')
+      return false
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
+      }
+      setIsCameraOn(true)
+      setScanStatus('Camera đã bật')
+      return true
+    } catch (error) {
+      let message = 'Không mở được camera. Hãy kiểm tra quyền truy cập camera của trình duyệt.'
+
+      if (error?.name === 'NotAllowedError') {
+        message = 'Trình duyệt đang chặn quyền camera. Hãy cho phép quyền camera cho localhost rồi thử lại.'
+      } else if (error?.name === 'NotFoundError') {
+        message = 'Không tìm thấy webcam trên thiết bị.'
+      } else if (error?.name === 'NotReadableError') {
+        message = 'Webcam đang được ứng dụng khác sử dụng. Hãy tắt ứng dụng đó rồi thử lại.'
+      }
+
+      setCameraError(message)
+      setScanStatus('Chưa nhận diện')
+      return false
+    }
+  }
+
+  const scanExpression = async () => {
+    if (!isCameraOn) {
+      await startCamera()
+      return
+    }
+
+    setCameraError('')
+    setIsScanning(true)
+    setScanStatus('Đang nhận diện...')
+
+    try {
+      if (!selectedChild?.id) {
+        setCameraError('Chưa chọn tài khoản trẻ nên chưa thể dự đoán cảm xúc.')
+        setScanStatus('Chưa nhận diện')
+        return
+      }
+
+      const frame = await captureVideoFrame(videoRef.current)
+      const result = await trackingApi.predictEmotion(selectedChild.id, frame, {
+        targetEmotion: data.modelEmotion,
+      })
+      const prediction = result.prediction || {}
+      const detectedEmotion = getModelEmotionInfo(prediction.emotion)
+      const confidence = Number(prediction.confidence || 0)
+      const expressionCheck = prediction.expression_check
+      const isCorrect = typeof expressionCheck?.is_correct === 'boolean'
+        ? expressionCheck.is_correct
+        : detectedEmotion.uiId === data.emotion
+
+      setScanStatus(isCorrect ? 'Nhận diện đúng!' : `Model thấy ${detectedEmotion.label}`)
+      onAnswer(isCorrect, data.emotion, {
+        aiDetectedEmotion: detectedEmotion.uiId,
+        aiConfidence: confidence,
+        aiMatchScore: isCorrect ? Math.max(confidence, 0.5) : confidence,
+      })
+    } catch (error) {
+      setCameraError(error.message || 'Không gửi được ảnh đến mô hình cảm xúc.')
+      setScanStatus('Chưa nhận diện')
+    } finally {
+      setIsScanning(false)
+    }
+  }
+
+  return (
+    <div className="expression-game-shell">
       {feedbackOverlay}
-      <div className="game-header">
-        <button className="game-back" onClick={backToMenu}>←</button>
-        <div className="game-score">⭐ {score}</div>
+      <div className="expression-game-topbar">
+        <button className="expression-game-back" onClick={onBack} aria-label="Quay lại">
+          ←
+        </button>
+        <div className="expression-game-score">
+          <span aria-hidden="true">✪</span>
+          <strong>{score}</strong>
+        </div>
       </div>
 
-      <div className="match-description">{currentGameData.description}</div>
-
-      <div className="match-options">
-        {currentGameData.options.map((emoji) => (
-          <button
-            key={emoji}
-            className="match-btn"
-            onClick={() => handleGameAnswer(emoji === currentGameData.correctEmoji, currentGameData.emotion)}
-          >
-            <span className="match-emoji">{emoji}</span>
-          </button>
-        ))}
+      <div className="expression-game-progress" aria-label={`Tiến độ ${currentIndex + 1}/${total}`}>
+        <div style={{ width: `${((currentIndex + 1) / total) * 100}%` }}></div>
       </div>
+
+      <div className="expression-game-stage">
+        <div className="expression-game-prompt-card">
+          <div className="expression-game-emoji">{data.emoji}</div>
+          <strong>{data.label}</strong>
+        </div>
+        <div className="expression-game-arrow" aria-hidden="true">↓</div>
+
+        <div className="expression-game-camera-wrap">
+          <div className="expression-game-status">{isScanning ? 'Đang nhận diện...' : scanStatus}</div>
+          <div className="expression-game-camera">
+            <video
+              ref={videoRef}
+              className={isCameraOn ? 'expression-game-video' : 'expression-game-video hidden'}
+              autoPlay
+              playsInline
+              muted
+            />
+            {isCameraOn && <div className="expression-game-face-guide" aria-hidden="true"></div>}
+            {!isCameraOn && (
+              <div className="expression-game-avatar" aria-hidden="true">
+                <div className="expression-game-avatar-face">
+                  <span className="avatar-eye left"></span>
+                  <span className="avatar-eye right"></span>
+                  <span className="avatar-mouth"></span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="expression-game-copy">
+        <h2>Làm theo biểu cảm này nhé!</h2>
+        <p>{data.instruction || data.description}</p>
+      </div>
+
+      {cameraError && <p className="expression-game-error">{cameraError}</p>}
+
+      <button className="expression-game-check" onClick={scanExpression} disabled={isScanning}>
+        {isScanning ? 'Đang kiểm tra...' : isCameraOn ? 'Kiểm tra biểu cảm' : 'Bật camera'}
+      </button>
     </div>
   )
 }

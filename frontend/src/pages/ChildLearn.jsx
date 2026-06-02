@@ -1,39 +1,88 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
-import { contentApi, getSelectedChild, setSelectedChild } from '../services/api'
+import { contentApi, getSelectedChild, setSelectedChild, trackingApi } from '../services/api'
+import { captureDetectedFace } from '../utils/faceCapture'
 import '../styles/Child.css'
 import '../styles/ChildLearn.css'
 import '../styles/ResultScreen.css'
 
-const emotionLabels = {
-  JOY: { label: 'Vui vẻ', emoji: '😊', color: '#ffd700' },
-  HAPPY: { label: 'Vui vẻ', emoji: '😊', color: '#ffd700' },
-  SAD: { label: 'Buồn', emoji: '😢', color: '#87ceeb' },
-  ANGRY: { label: 'Tức giận', emoji: '😡', color: '#ff6b6b' },
-  CALM: { label: 'Bình tĩnh', emoji: '😌', color: '#90ee90' },
-  SCARED: { label: 'Sợ', emoji: '😨', color: '#a67bb8' },
-  SURPRISED: { label: 'Ngạc nhiên', emoji: '😮', color: '#dda0dd' },
+const expressionEmotions = [
+  {
+    id: 'happy',
+    modelEmotion: 'happy',
+    label: 'Vui',
+    icon: '😊',
+    color: '#f6b814',
+    prompt: 'Cười tươi',
+  },
+  {
+    id: 'sad',
+    modelEmotion: 'sad',
+    label: 'Buồn',
+    icon: '😢',
+    color: '#6aa6d9',
+    prompt: 'Mặt buồn',
+  },
+  {
+    id: 'angry',
+    modelEmotion: 'angry',
+    label: 'Tức giận',
+    icon: '😠',
+    color: '#e87461',
+    prompt: 'Mặt giận',
+  },
+  {
+    id: 'scared',
+    modelEmotion: 'fear',
+    label: 'Sợ',
+    icon: '😟',
+    color: '#9b8ac6',
+    prompt: 'Mặt sợ',
+  },
+  {
+    id: 'calm',
+    modelEmotion: 'neutral',
+    label: 'Bình tĩnh',
+    icon: '😌',
+    color: '#77bfa3',
+    prompt: 'Mặt bình tĩnh',
+  },
+]
+
+const modelEmotionMap = {
+  happy: { uiId: 'happy', label: 'Vui', icon: '😊' },
+  sad: { uiId: 'sad', label: 'Buồn', icon: '😢' },
+  angry: { uiId: 'angry', label: 'Tức giận', icon: '😠' },
+  fear: { uiId: 'scared', label: 'Sợ', icon: '😟' },
+  neutral: { uiId: 'calm', label: 'Bình tĩnh', icon: '😌' },
 }
 
-function normalizeEmotion(value) {
-  return String(value || '').trim().toUpperCase()
-}
-
-function emotionInfo(value) {
-  return emotionLabels[normalizeEmotion(value)] || {
-    label: value || 'Cảm xúc',
-    emoji: '🙂',
-    color: '#b8d8f2',
+function getModelEmotionInfo(value) {
+  const key = String(value || '').trim().toLowerCase()
+  return modelEmotionMap[key] || {
+    uiId: 'calm',
+    label: value || 'Không xác định',
+    icon: '🙂',
   }
 }
 
+async function captureVideoFrame(video) {
+  const captured = await captureDetectedFace(video, { filenamePrefix: 'lesson-expression-face' })
+
+  if (!captured.ok) {
+    throw new Error(captured.message)
+  }
+
+  return captured.file
+}
+
 function getContentDescription(content) {
-  return content.lecture?.description || content.quiz?.description || 'Bài học cảm xúc'
+  return content.lecture?.description || 'Bài học cảm xúc'
 }
 
 function getContentMedia(content) {
-  return content.lecture?.media_url || content.quiz?.media_url || '🙂'
+  return content.lecture?.media_url || '🙂'
 }
 
 function getMediaKind(value) {
@@ -54,6 +103,41 @@ function isLikelyMediaLink(value) {
   return /^(https?:|blob:|data:|\/)/i.test(String(value || '').trim())
 }
 
+function getEmbeddableMediaUrl(value) {
+  const source = String(value || '').trim()
+  if (!source) return ''
+
+  try {
+    const url = new URL(source, window.location.origin)
+    const host = url.hostname.replace(/^www\./, '').toLowerCase()
+
+    if (host === 'youtu.be') {
+      const videoId = url.pathname.split('/').filter(Boolean)[0]
+      if (videoId) return `https://www.youtube.com/embed/${videoId}`
+    }
+
+    if (host.endsWith('youtube.com')) {
+      const videoId = url.searchParams.get('v')
+      const shortsMatch = url.pathname.match(/^\/shorts\/([^/]+)/)
+      const embedMatch = url.pathname.match(/^\/embed\/([^/]+)/)
+
+      if (videoId) return `https://www.youtube.com/embed/${videoId}`
+      if (shortsMatch?.[1]) return `https://www.youtube.com/embed/${shortsMatch[1]}`
+      if (embedMatch?.[1]) return url.href
+    }
+
+    if (host === 'drive.google.com') {
+      const fileMatch = url.pathname.match(/\/file\/d\/([^/]+)/)
+      const fileId = fileMatch?.[1] || url.searchParams.get('id')
+      if (fileId) return `https://drive.google.com/file/d/${fileId}/preview`
+    }
+  } catch {
+    return source
+  }
+
+  return source
+}
+
 function makeSessionKey(contentId) {
   if (window.crypto?.randomUUID) return `learn-${contentId}-${window.crypto.randomUUID()}`
   return `learn-${contentId}-${Date.now()}`
@@ -61,14 +145,13 @@ function makeSessionKey(contentId) {
 
 export default function ChildLearn() {
   const navigate = useNavigate()
-  const { setUserStars } = useOutletContext()
+  const { userStars, setUserStars } = useOutletContext()
   const selectedChild = getSelectedChild()
   const [currentTab, setCurrentTab] = useState('LECTURE')
   const [contents, setContents] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showResult, setShowResult] = useState(null)
   const [lastOutcome, setLastOutcome] = useState(null)
-  const [earnedStars, setEarnedStars] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -78,13 +161,10 @@ export default function ChildLearn() {
     }
 
     let mounted = true
-    Promise.all([
-      contentApi.list(selectedChild.id, { type: 'LECTURE', include_locked: true }),
-      contentApi.list(selectedChild.id, { type: 'QUIZ', include_locked: true }),
-    ])
-      .then(([lectureResult, quizResult]) => {
+    contentApi.list(selectedChild.id, { type: 'LECTURE', include_locked: true })
+      .then((lectureResult) => {
         if (!mounted) return
-        setContents([...(lectureResult.contents || []), ...(quizResult.contents || [])])
+        setContents(lectureResult.contents || [])
         setError('')
       })
       .catch((err) => {
@@ -100,7 +180,7 @@ export default function ChildLearn() {
   }, [selectedChild?.id])
 
   const tabContents = useMemo(
-    () => contents.filter((content) => content.type === currentTab),
+    () => (currentTab === 'EXPRESS' ? [] : contents.filter((content) => content.type === currentTab)),
     [contents, currentTab],
   )
   const current = tabContents[currentIndex]
@@ -137,24 +217,31 @@ export default function ChildLearn() {
 
     try {
       const now = new Date().toISOString()
-      const result = await contentApi.recordSession(selectedChild.id, {
+      const payload = {
         content_id: content.id,
         idempotency_key: makeSessionKey(content.id),
         duration_seconds: 30,
         status: 'COMPLETED',
         started_at: now,
         completed_at: now,
-        is_correct: isCorrect,
-        selected_emotion: selectedEmotion,
         metadata: {
           source: 'child-learn-page',
           tab: currentTab,
         },
-      })
+      }
+
+      if (typeof isCorrect === 'boolean') {
+        payload.is_correct = isCorrect
+      }
+
+      if (typeof selectedEmotion === 'string' && selectedEmotion.trim()) {
+        payload.selected_emotion = selectedEmotion
+      }
+
+      const result = await contentApi.recordSession(selectedChild.id, payload)
 
       updateStars(result.child_total_stars)
       const stars = result.stars_earned || result.session?.stars_earned || 0
-      setEarnedStars((value) => value + stars)
       setContents((prev) => prev.map((item) => (
         item.id === content.id
           ? {
@@ -195,10 +282,10 @@ export default function ChildLearn() {
     const result = await recordSession({
       content: current,
       isCorrect: true,
-      selectedEmotion: null,
     })
     setLastOutcome({
       emotion: current.title,
+      starsEarned: result.starsEarned,
       explanation: result.starsEarned > 0
         ? `Backend đã cộng ${result.starsEarned} sao khi hoàn thành bài học.`
         : 'Bài học đã được ghi nhận. Nội dung này có thể đã nhận thưởng trước đó.',
@@ -206,34 +293,28 @@ export default function ChildLearn() {
     setShowResult('correct')
   }
 
-  const handleAnswer = async (selectedEmotion) => {
-    if (!current) return
-    const correctEmotion = normalizeEmotion(current.quiz?.correct_emotion)
-    const selected = normalizeEmotion(selectedEmotion)
-    const isCorrect = selected === correctEmotion
-    const result = await recordSession({
-      content: current,
-      isCorrect,
-      selectedEmotion: selected,
-    })
-    const correctInfo = emotionInfo(correctEmotion)
-    setLastOutcome({
-      emotion: correctInfo.label,
-      explanation: isCorrect
-        ? `Backend đã cộng ${result.starsEarned} sao cho câu trả lời đúng.`
-        : `Đáp án đúng là ${correctInfo.label}.`,
-    })
-    setShowResult(isCorrect ? 'correct' : 'incorrect')
-  }
-
   const handleContinueResult = () => {
     setShowResult(null)
     setLastOutcome(null)
+    if (currentTab === 'EXPRESS') return
+
     if (currentIndex < tabContents.length - 1) {
       setCurrentIndex((index) => index + 1)
     } else {
       setCurrentIndex(0)
     }
+  }
+
+  const handleExpressionResult = ({ isCorrect, targetEmotion, detectedEmotion, confidence }) => {
+    const confidencePercent = Math.round(confidence * 100)
+    setLastOutcome({
+      starsEarned: 0,
+      rewardLabel: isCorrect ? 'Đã kiểm tra' : 'Chưa đúng',
+      explanation: isCorrect
+        ? `Model nhận ra biểu cảm ${targetEmotion.label} với độ tin cậy ${confidencePercent}%.`
+        : `Mục tiêu là ${targetEmotion.label}, model đang thấy gần với ${detectedEmotion.label}.`,
+    })
+    setShowResult(isCorrect ? 'correct' : 'incorrect')
   }
 
   if (!selectedChild?.id) {
@@ -261,20 +342,17 @@ export default function ChildLearn() {
     <div className="child-lesson">
       {showResult === 'correct' && (
         <CorrectAnswer
-          emotion={lastOutcome?.emotion}
-          score={`${earnedStars} ⭐`}
-          title={currentTab === 'LECTURE' ? 'Hoàn thành bài học!' : 'Đúng rồi!'}
-          messages={[
-            lastOutcome?.explanation || 'Tiến độ đã được lưu vào backend.',
-            'Con tiếp tục học bài tiếp theo nhé!',
-          ]}
+          resultType="lesson"
+          reward={lastOutcome?.starsEarned}
+          rewardLabel={lastOutcome?.rewardLabel}
+          title="Hoàn thành xuất sắc!"
           onContinue={handleContinueResult}
         />
       )}
 
       {showResult === 'incorrect' && (
         <IncorrectAnswer
-          emotion={lastOutcome?.emotion}
+          resultType="lesson"
           explanation={lastOutcome?.explanation}
           title="Chưa đúng rồi!"
           continueLabel="Tiếp tục →"
@@ -287,25 +365,28 @@ export default function ChildLearn() {
         <button className={`tab ${currentTab === 'LECTURE' ? 'active' : ''}`} onClick={() => switchTab('LECTURE')}>
           📘 Bài học
         </button>
-        <button className={`tab ${currentTab === 'QUIZ' ? 'active' : ''}`} onClick={() => switchTab('QUIZ')}>
-          ✅ Câu hỏi
+        <button className={`tab ${currentTab === 'EXPRESS' ? 'active' : ''}`} onClick={() => switchTab('EXPRESS')}>
+          😊 Thể hiện cảm xúc
         </button>
       </div>
 
       {error && <p className="camera-error">{error}</p>}
 
-      {!current ? (
+      {currentTab === 'EXPRESS' ? (
+        <ExpressionLesson
+          selectedChild={selectedChild}
+          userStars={userStars}
+          onBack={() => navigate('/child/home')}
+          onResult={handleExpressionResult}
+        />
+      ) : !current ? (
         <div className="lesson-card">
-          <h2>Chưa có nội dung {currentTab === 'LECTURE' ? 'bài học' : 'câu hỏi'} từ backend</h2>
+          <h2>Chưa có nội dung bài học từ backend</h2>
           <p>Hãy tạo nội dung trong trang Admin hoặc chạy lại seed database.</p>
         </div>
       ) : (
         <div className="lesson-card">
-          {currentTab === 'LECTURE' ? (
-            <LectureContent content={current} onComplete={handleCompleteLecture} />
-          ) : (
-            <QuizContent content={current} onAnswer={handleAnswer} />
-          )}
+          <LectureContent content={current} onComplete={handleCompleteLecture} />
 
           <div className="lesson-navigation">
             <button className="nav-btn" onClick={handlePrev} disabled={currentIndex === 0}>← Trước</button>
@@ -325,6 +406,37 @@ export default function ChildLearn() {
       <button className="back-to-home" onClick={() => navigate('/child/home')}>
         ← Quay lại
       </button>
+    </div>
+  )
+}
+
+function LinkedMedia({ source, title }) {
+  const embedUrl = getEmbeddableMediaUrl(source)
+  const [showEmbed, setShowEmbed] = useState(embedUrl !== source)
+
+  if (showEmbed) {
+    return (
+      <div className="lesson-media-frame lesson-media-embed-frame">
+        <iframe
+          className="lesson-media-iframe"
+          src={embedUrl}
+          title={`Media ${title}`}
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="lesson-media-frame">
+      <img
+        className="lesson-media-image"
+        src={source}
+        alt={`Minh họa ${title}`}
+        onError={() => setShowEmbed(true)}
+      />
     </div>
   )
 }
@@ -357,11 +469,7 @@ function ContentMedia({ media, fallback = '🙂', title = 'media bài học' }) 
   }
 
   if (source && isLikelyMediaLink(source)) {
-    return (
-      <a className="lesson-media-link" href={source} target="_blank" rel="noreferrer">
-        Mở media
-      </a>
-    )
+    return <LinkedMedia key={source} source={source} title={title} />
   }
 
   return (
@@ -374,21 +482,12 @@ function ContentMedia({ media, fallback = '🙂', title = 'media bài học' }) 
 function LectureContent({ content, onComplete }) {
   const media = getContentMedia(content)
   const description = getContentDescription(content)
-  const progress = content.progress
 
   return (
     <div className="emotion-card">
       <ContentMedia media={media} title={content.title} />
       <h2 className="emotion-title">{content.title}</h2>
       <p className="emotion-description">{description}</p>
-
-      <div className="examples-section">
-        <h4>Tiến độ backend:</h4>
-        <ul className="examples-list">
-          <li>⭐ Sao đã nhận: {progress?.stars_earned || 0}</li>
-          <li>✅ Số lần hoàn thành: {progress?.completed_sessions || 0}</li>
-        </ul>
-      </div>
 
       <button className="learn-complete-btn" onClick={onComplete}>
         Hoàn thành bài học
@@ -397,32 +496,169 @@ function LectureContent({ content, onComplete }) {
   )
 }
 
-function QuizContent({ content, onAnswer }) {
-  const quiz = content.quiz || {}
-  const answers = quiz.answer_emotions || []
-  const question = quiz.description || content.title
+function ExpressionLesson({ selectedChild, userStars, onBack, onResult }) {
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
+  const [emotionIndex, setEmotionIndex] = useState(0)
+  const [isCameraOn, setIsCameraOn] = useState(false)
+  const [cameraError, setCameraError] = useState('')
+  const [scanResult, setScanResult] = useState(null)
+  const [isScanning, setIsScanning] = useState(false)
+
+  const targetEmotion = expressionEmotions[emotionIndex]
+
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach((track) => track.stop())
+    }
+  }, [])
+
+  const startCamera = async () => {
+    setCameraError('')
+    setScanResult(null)
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Trình duyệt hiện tại không hỗ trợ mở camera.')
+      return false
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
+      }
+      setIsCameraOn(true)
+      return true
+    } catch (error) {
+      let message = 'Không mở được camera. Hãy kiểm tra quyền truy cập camera của trình duyệt.'
+
+      if (error?.name === 'NotAllowedError') {
+        message = 'Trình duyệt đang chặn quyền camera. Hãy cho phép quyền camera cho localhost rồi thử lại.'
+      } else if (error?.name === 'NotFoundError') {
+        message = 'Không tìm thấy webcam trên thiết bị.'
+      } else if (error?.name === 'NotReadableError') {
+        message = 'Webcam đang được ứng dụng khác sử dụng. Hãy tắt ứng dụng đó rồi thử lại.'
+      }
+
+      setCameraError(message)
+      return false
+    }
+  }
+
+  const scanExpression = async () => {
+    if (!isCameraOn) {
+      await startCamera()
+      return
+    }
+
+    setCameraError('')
+    setIsScanning(true)
+
+    try {
+      if (!selectedChild?.id) {
+        setCameraError('Chưa chọn tài khoản trẻ nên chưa thể dự đoán cảm xúc.')
+        return
+      }
+
+      const frame = await captureVideoFrame(videoRef.current)
+      const result = await trackingApi.predictEmotion(selectedChild.id, frame, {
+        targetEmotion: targetEmotion.modelEmotion,
+      })
+      const prediction = result.prediction || {}
+      const detectedEmotion = getModelEmotionInfo(prediction.emotion)
+      const confidence = Number(prediction.confidence || 0)
+      const expressionCheck = prediction.expression_check
+      const isCorrect = typeof expressionCheck?.is_correct === 'boolean'
+        ? expressionCheck.is_correct
+        : detectedEmotion.uiId === targetEmotion.id
+
+      const nextResult = {
+        isCorrect,
+        targetEmotion,
+        detectedEmotion,
+        confidence,
+      }
+
+      setScanResult(nextResult)
+      onResult(nextResult)
+    } catch (error) {
+      setCameraError(error.message || 'Không gửi được ảnh đến mô hình cảm xúc.')
+    } finally {
+      setIsScanning(false)
+    }
+  }
+
+  const switchTargetEmotion = () => {
+    setEmotionIndex((index) => (index + 1) % expressionEmotions.length)
+    setScanResult(null)
+    setCameraError('')
+  }
 
   return (
-    <>
-      <div className="emotion-card">
-        <ContentMedia media={quiz.media_url} fallback="❓" title={content.title} />
-        <h2 className="emotion-title">{content.title}</h2>
-        <p className="emotion-description">Chọn câu trả lời đúng để backend ghi nhận điểm sao.</p>
-      </div>
-
-      <div className="quiz-section">
-        <h3 className="quiz-question">{question}</h3>
-        <div className="quiz-options">
-          {answers.map((answer) => {
-            const info = emotionInfo(answer)
-            return (
-              <button key={answer} className="quiz-option-btn" onClick={() => onAnswer(answer)}>
-                {info.emoji} {info.label}
-              </button>
-            )
-          })}
+    <section className="express-lesson-shell">
+      <div className="express-lesson-topbar">
+        <button className="express-back-btn" onClick={onBack} aria-label="Quay lại">
+          ←
+        </button>
+        <div className="express-star-pill">
+          <span aria-hidden="true">✪</span>
+          <strong>{Number(userStars || 0).toLocaleString()}</strong>
         </div>
       </div>
-    </>
+
+      <div className="express-lesson-content">
+        <h2>Con hãy làm biểu cảm giống bạn này nhé!</h2>
+        <div className="express-title-mark" aria-hidden="true"></div>
+
+        <div className="express-practice-area">
+          <article className="express-target-card" style={{ '--express-color': targetEmotion.color }}>
+            <span className="express-tip-dot" aria-hidden="true">●</span>
+            <div className="express-target-emoji">{targetEmotion.icon}</div>
+            <strong>{targetEmotion.prompt}</strong>
+          </article>
+
+          <button className="express-switch-btn" onClick={switchTargetEmotion} aria-label="Đổi cảm xúc mục tiêu">
+            ⇄
+          </button>
+
+          <article className="express-camera-card">
+            <div className="express-live-badge">
+              <span aria-hidden="true"></span>
+              LIVE
+            </div>
+            <video
+              ref={videoRef}
+              className={isCameraOn ? 'express-camera-video' : 'express-camera-video hidden'}
+              autoPlay
+              playsInline
+              muted
+            />
+            {isCameraOn && <div className="express-face-guide" aria-hidden="true"></div>}
+            {!isCameraOn && (
+              <div className="express-camera-placeholder">
+                <span>📷</span>
+                <p>Camera đang tắt</p>
+              </div>
+            )}
+            {scanResult && (
+              <div className={`express-scan-bubble ${scanResult.isCorrect ? 'correct' : 'incorrect'}`}>
+                <span>{scanResult.isCorrect ? '😊' : '🙂'}</span>
+                <p>
+                  {scanResult.isCorrect ? 'Đúng biểu cảm' : `Gần với ${scanResult.detectedEmotion.label}`}
+                </p>
+              </div>
+            )}
+          </article>
+        </div>
+
+        {cameraError && <p className="express-camera-error">{cameraError}</p>}
+
+        <button className="express-check-btn" onClick={scanExpression} disabled={isScanning}>
+          {isScanning ? 'Đang kiểm tra...' : isCameraOn ? 'Kiểm tra biểu cảm' : 'Bật camera'}
+        </button>
+      </div>
+    </section>
   )
 }

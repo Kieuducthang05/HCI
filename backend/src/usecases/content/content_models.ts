@@ -36,6 +36,7 @@ export type ContentRow = {
     unlockStarCost: number;
     promptAssetType: string | null;
     promptAssetUrl: string | null;
+    config: Record<string, unknown>;
   } | null;
 };
 
@@ -79,6 +80,7 @@ export type ContentResult = {
     unlockStarCost: number;
     promptAssetType: GamePromptAssetType | null;
     promptAssetUrl: string | null;
+    config: Record<string, unknown>;
   } | null;
   isUnlocked: boolean | null;
   unlock: {
@@ -162,6 +164,7 @@ export function toContentResult(
           unlockStarCost: content.game.unlockStarCost,
           promptAssetType: normalizeGamePromptAssetType(content.game.promptAssetType),
           promptAssetUrl: content.game.promptAssetUrl,
+          config: content.game.config ?? {},
         }
       : null,
     isUnlocked: state.unlock === undefined ? null : unlock !== null,
