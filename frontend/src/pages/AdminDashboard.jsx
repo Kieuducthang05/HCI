@@ -42,6 +42,8 @@ const emptyContentForm = {
   timeLimitSeconds: 60,
   difficultyLevel: 1,
   unlockStarCost: 0,
+  mediaFile: null,
+  gamePromptFile: null,
 }
 
 const emptyPetForm = {
@@ -110,6 +112,7 @@ function normalizeGameOptions(kind, options) {
       emotion: option.emotion || option.value || defaults[index]?.emotion || 'CALM',
       value: option.value || option.emotion || defaults[index]?.value || `OPTION_${index + 1}`,
       imageUrl: option.imageUrl || '',
+      imageFile: option.imageFile || null,
       previewUrl: option.previewUrl || option.resolvedImageUrl || '',
       src: option.src || defaults[index]?.src || '',
     }
@@ -230,6 +233,8 @@ function toContentForm(content) {
     timeLimitSeconds: content.game?.time_limit_seconds || 60,
     difficultyLevel: getContentDifficulty(content),
     unlockStarCost: getContentUnlockCost(content) || 0,
+    mediaFile: null,
+    gamePromptFile: null,
   }
 }
 
@@ -516,6 +521,15 @@ export default function AdminDashboard() {
     }
   }, [petForm.imagePreviewUrl])
 
+  useEffect(() => {
+    const gamePromptPreviewUrl = contentForm.gamePromptPreviewUrl
+    return () => {
+      if (isObjectUrl(gamePromptPreviewUrl)) {
+        URL.revokeObjectURL(gamePromptPreviewUrl)
+      }
+    }
+  }, [contentForm.gamePromptPreviewUrl])
+
   const handleLogout = async () => {
     try {
       await authApi.signOut()
@@ -527,17 +541,96 @@ export default function AdminDashboard() {
     }
   }
 
+  const resetContentForm = () => {
+    if (isObjectUrl(contentForm.mediaPreviewUrl)) {
+      URL.revokeObjectURL(contentForm.mediaPreviewUrl)
+    }
+    if (isObjectUrl(contentForm.gamePromptPreviewUrl)) {
+      URL.revokeObjectURL(contentForm.gamePromptPreviewUrl)
+    }
+    normalizeGameOptions(contentForm.gameKind, contentForm.gameOptions).forEach((option) => {
+      if (isObjectUrl(option.previewUrl)) {
+        URL.revokeObjectURL(option.previewUrl)
+      }
+    })
+    setContentForm(emptyContentForm)
+    setEditingContentId('')
+  }
+
   const handleContentSubmit = async (event) => {
     event.preventDefault()
     try {
       setLoading(true)
-      if (contentForm.type === 'GAME' && normalizeGameKind(contentForm.gameKind) === 'CHOOSE_EMOTION') {
-        const missingImageOption = normalizeGameOptions(contentForm.gameKind, contentForm.gameOptions).find((option) => !option.imageUrl?.trim())
+      
+      let mediaUrl = contentForm.mediaUrl
+      if (contentForm.mediaFile) {
+        setMediaUploading(true)
+        setError('')
+        const result = await adminApi.uploadMedia({
+          file: contentForm.mediaFile,
+          purpose: getContentMediaPurpose(contentForm.type),
+        })
+        const uploadedUrl = result.media_asset?.storage_key || result.media_asset?.url
+        if (!uploadedUrl) {
+          throw new Error('Backend chưa trả về đường dẫn media.')
+        }
+        mediaUrl = uploadedUrl
+      }
+      
+      let gamePromptImageUrl = contentForm.gamePromptImageUrl
+      if (contentForm.gamePromptFile) {
+        setMediaUploading(true)
+        setError('')
+        const result = await adminApi.uploadMedia({
+          file: contentForm.gamePromptFile,
+          purpose: 'game-media',
+        })
+        const uploadedUrl = result.media_asset?.storage_key || result.media_asset?.url
+        if (!uploadedUrl) {
+          throw new Error('Backend chưa trả về đường dẫn ảnh game.')
+        }
+        gamePromptImageUrl = uploadedUrl
+      }
+      
+      const updatedOptions = []
+      const originalOptions = normalizeGameOptions(contentForm.gameKind, contentForm.gameOptions)
+      for (let i = 0; i < originalOptions.length; i++) {
+        const option = originalOptions[i]
+        let imageUrl = option.imageUrl
+        if (option.imageFile) {
+          setMediaUploading(true)
+          setError('')
+          const result = await adminApi.uploadMedia({
+            file: option.imageFile,
+            purpose: 'game-media',
+          })
+          const uploadedUrl = result.media_asset?.storage_key || result.media_asset?.url
+          if (!uploadedUrl) {
+            throw new Error(`Backend chưa trả về đường dẫn ảnh cho đáp án ${i + 1}.`)
+          }
+          imageUrl = uploadedUrl
+        }
+        updatedOptions.push({
+          ...option,
+          imageUrl,
+        })
+      }
+      
+      const tempForm = {
+        ...contentForm,
+        mediaUrl,
+        gamePromptImageUrl,
+        gameOptions: updatedOptions,
+      }
+      
+      if (tempForm.type === 'GAME' && normalizeGameKind(tempForm.gameKind) === 'CHOOSE_EMOTION') {
+        const missingImageOption = normalizeGameOptions(tempForm.gameKind, tempForm.gameOptions).find((option) => !option.imageUrl?.trim())
         if (missingImageOption) {
           throw new Error('Game 1 yêu cầu tải ảnh cho tất cả đáp án.')
         }
       }
-      const payload = buildContentPayload(contentForm)
+      
+      const payload = buildContentPayload(tempForm)
       if (editingContentId) {
         await adminApi.updateContent(editingContentId, payload)
         setMessage('Đã cập nhật nội dung.')
@@ -545,12 +638,13 @@ export default function AdminDashboard() {
         await adminApi.createContent(payload)
         setMessage('Đã tạo nội dung mới.')
       }
-      setContentForm(emptyContentForm)
-      setEditingContentId('')
+      
+      resetContentForm()
       await loadAdminData()
     } catch (err) {
       setError(err.message || 'Không lưu được nội dung.')
     } finally {
+      setMediaUploading(false)
       setLoading(false)
     }
   }
@@ -614,79 +708,74 @@ export default function AdminDashboard() {
     })
   }
 
-  const handleContentMediaUpload = async (event) => {
+  const handleContentMediaUpload = (event) => {
     const input = event.target
     const file = input.files?.[0]
     if (!file) return
 
-    try {
-      setMediaUploading(true)
-      setError('')
-      const result = await adminApi.uploadMedia({
-        file,
-        purpose: getContentMediaPurpose(contentForm.type),
-      })
-      const mediaUrl = result.media_asset?.storage_key || result.media_asset?.url
-      if (!mediaUrl) {
-        throw new Error('Backend chưa trả về đường dẫn media.')
-      }
-
-      const mediaPreviewUrl = result.media_asset?.url || URL.createObjectURL(file)
-      const mediaMimeType = result.media_asset?.mime_type || file.type || ''
-      setContentForm((form) => ({
-        ...form,
-        mediaUrl,
-        mediaPreviewUrl,
-        mediaMimeType,
-      }))
-      setMessage('Đã tải media lên và liên kết với nội dung.')
-    } catch (err) {
-      setError(err.message || 'Không tải media lên được.')
-    } finally {
-      setMediaUploading(false)
-      input.value = ''
+    if (isObjectUrl(contentForm.mediaPreviewUrl)) {
+      URL.revokeObjectURL(contentForm.mediaPreviewUrl)
     }
+
+    const previewUrl = URL.createObjectURL(file)
+    setContentForm((form) => ({
+      ...form,
+      mediaFile: file,
+      mediaPreviewUrl: previewUrl,
+      mediaMimeType: file.type || '',
+    }))
+    input.value = ''
   }
 
   const handleClearContentMedia = () => {
+    if (isObjectUrl(contentForm.mediaPreviewUrl)) {
+      URL.revokeObjectURL(contentForm.mediaPreviewUrl)
+    }
     setContentForm((form) => ({
       ...form,
       mediaUrl: '',
       mediaPreviewUrl: '',
       mediaMimeType: '',
+      mediaFile: null,
     }))
   }
 
-  const handleGameConfigImageUpload = async (event, target) => {
+  const handleGameConfigImageUpload = (event, target) => {
     const input = event.target
     const file = input.files?.[0]
     if (!file) return
 
-    try {
-      setMediaUploading(true)
-      setError('')
-      const result = await adminApi.uploadMedia({
-        file,
-        purpose: 'game-media',
-      })
-      const storageKey = result.media_asset?.storage_key || result.media_asset?.url
-      const previewUrl = result.media_asset?.url || storageKey
-      if (!storageKey) {
-        throw new Error('Backend chưa trả về đường dẫn media.')
-      }
+    const previewUrl = URL.createObjectURL(file)
 
-      if (target.type === 'prompt') {
-        setContentForm((form) => ({ ...form, gamePromptImageUrl: storageKey, gamePromptPreviewUrl: previewUrl }))
-      } else if (target.type === 'option') {
-        updateGameOption(target.index, { imageUrl: storageKey, previewUrl })
+    if (target.type === 'prompt') {
+      if (isObjectUrl(contentForm.gamePromptPreviewUrl)) {
+        URL.revokeObjectURL(contentForm.gamePromptPreviewUrl)
       }
-      setMessage('Đã tải ảnh game lên và liên kết với cấu hình.')
-    } catch (err) {
-      setError(err.message || 'Không tải ảnh game lên được.')
-    } finally {
-      setMediaUploading(false)
-      input.value = ''
+      setContentForm((form) => ({
+        ...form,
+        gamePromptFile: file,
+        gamePromptPreviewUrl: previewUrl,
+      }))
+    } else if (target.type === 'option') {
+      setContentForm((form) => {
+        const nextOptions = normalizeGameOptions(form.gameKind, form.gameOptions).map((option, index) => {
+          if (index !== target.index) return option
+          if (isObjectUrl(option.previewUrl)) {
+            URL.revokeObjectURL(option.previewUrl)
+          }
+          return {
+            ...option,
+            imageFile: file,
+            previewUrl,
+          }
+        })
+        return {
+          ...form,
+          gameOptions: nextOptions,
+        }
+      })
     }
+    input.value = ''
   }
 
   const handlePetImageUpload = (event) => {
@@ -922,11 +1011,11 @@ export default function AdminDashboard() {
               {contentForm.type !== 'GAME' && (
                 <div className="admin-form-row">
                   <AdminField label="Tải media từ máy">
-                    {contentForm.type === 'QUIZ' && contentForm.mediaUrl ? (
+                    {contentForm.mediaPreviewUrl || contentForm.mediaUrl ? (
                       <AdminContentMediaPreview
                         source={contentForm.mediaPreviewUrl || contentForm.mediaUrl}
                         mimeType={contentForm.mediaMimeType}
-                        title={contentForm.title || 'quiz'}
+                        title={contentForm.title || 'media'}
                         onClear={handleClearContentMedia}
                       />
                     ) : (
@@ -941,7 +1030,6 @@ export default function AdminDashboard() {
                         />
                       </label>
                     )}
-                    {contentForm.mediaUrl && <span className="admin-file-state">Đã có media tải lên</span>}
                   </AdminField>
                 </div>
               )}
@@ -1016,7 +1104,6 @@ export default function AdminDashboard() {
                             onChange={(event) => handleGameConfigImageUpload(event, { type: 'prompt' })}
                           />
                         </label>
-                        {contentForm.gamePromptImageUrl && <span className="admin-file-state">Đã có ảnh tình huống</span>}
                       </div>
                     </div>
                   )}
@@ -1110,20 +1197,6 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {contentForm.gameKind !== 'CHOOSE_REACTION' && (
-                    <div className="admin-form-row">
-                      <AdminField label="Cảm xúc mục tiêu">
-                        <select value={contentForm.targetEmotion} onChange={(e) => setContentForm({ ...contentForm, targetEmotion: e.target.value })}>
-                          {targetEmotionOptions.map((emotion) => (
-                            <option key={emotion} value={emotion}>{emotion}</option>
-                          ))}
-                        </select>
-                      </AdminField>
-                      <AdminField label="Thời lượng giới hạn">
-                        <input type="number" min="1" value={contentForm.timeLimitSeconds} onChange={(e) => setContentForm({ ...contentForm, timeLimitSeconds: e.target.value })} />
-                      </AdminField>
-                    </div>
-                  )}
                 </div>
               )}
               <div className="admin-form-actions">
@@ -1132,7 +1205,7 @@ export default function AdminDashboard() {
                   {editingContentId ? 'Lưu thay đổi' : 'Tạo nội dung'}
                 </button>
                 {editingContentId && (
-                  <button type="button" onClick={() => { setEditingContentId(''); setContentForm(emptyContentForm) }}>
+                  <button type="button" onClick={resetContentForm}>
                     <FiX aria-hidden="true" />
                     Hủy
                   </button>

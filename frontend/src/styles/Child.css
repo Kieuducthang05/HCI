@@ -741,6 +741,20 @@ body.dark-mode {
     filter: saturate(1.02);
 }
 
+.game-card:disabled {
+    cursor: not-allowed;
+    opacity: 0.52;
+    filter: grayscale(0.2);
+    transform: none;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.game-card:disabled:hover {
+    transform: none;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    filter: grayscale(0.2);
+}
+
 .game-card:focus-visible {
     outline: 5px solid rgba(245, 183, 24, 0.62);
     outline-offset: 5px;
@@ -2652,7 +2666,7 @@ body.dark-mode {
 }
 
 .game1-description {
-    margin: 8px 0 0;
+    margin: 2px 0 0;
     color: #777b82;
     font-size: clamp(12px, 1.35vw, 14px);
     font-weight: 700;
@@ -2660,17 +2674,17 @@ body.dark-mode {
 }
 
 .game1-options-grid {
-    width: min(100%, 500px);
+    width: min(100%, 580px);
     display: grid;
-    grid-template-columns: repeat(2, minmax(140px, 220px));
+    grid-template-columns: repeat(2, minmax(160px, 260px));
     justify-content: center;
     gap: clamp(10px, 1.8vh, 16px) clamp(14px, 2.5vw, 24px);
-    margin: clamp(12px, 2vh, 18px) auto clamp(10px, 1.8vh, 16px);
+    margin: clamp(8px, 1.4vh, 14px) auto clamp(10px, 1.8vh, 16px);
 }
 
 .game1-option-card {
     width: 100%;
-    aspect-ratio: 1.18;
+    aspect-ratio: 1;
     display: block;
     padding: 0;
     border: 0;
@@ -2889,7 +2903,7 @@ body.dark-mode {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 2px;
     margin: 10px auto clamp(10px, 2vh, 20px);
     padding: clamp(10px, 1.6vh, 16px) clamp(14px, 2.2vw, 24px) clamp(12px, 2vh, 20px);
@@ -2902,7 +2916,7 @@ body.dark-mode {
 .reaction-scene-card h2 {
     margin: 0;
     color: #374151;
-    font-size: clamp(18px, 2.2vw, 24px);
+    font-size: clamp(22px, 2.8vw, 30px);
     font-weight: 900;
     line-height: 1.18;
     text-align: center;
@@ -2931,6 +2945,16 @@ body.dark-mode {
     height: 100%;
     display: block;
     object-fit: contain;
+}
+
+.reaction-scene-card.has-image {
+    width: min(640px, 100%);
+    height: min(54vh, 440px);
+}
+
+.reaction-scene-card.has-image .reaction-scene-image-wrap {
+    width: min(480px, 100%);
+    height: min(36vh, 320px);
 }
 
 .reaction-scene-child {

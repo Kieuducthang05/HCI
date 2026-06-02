@@ -612,18 +612,19 @@ INSERT INTO "game" (
   "is_default",
   "unlock_star_cost",
   "prompt_asset_type",
-  "prompt_asset_url"
+  "prompt_asset_url",
+  "config"
 )
 VALUES
-  ('11111111-1111-4111-8111-111111111101', 'JOY', 60, 1, true, 0, 'ICON', '😊'),
-  ('11111111-1111-4111-8111-111111111102', 'SAD', 60, 1, true, 0, 'ICON', '😢'),
-  ('11111111-1111-4111-8111-111111111103', 'CALM', 60, 1, true, 0, 'ICON', '😌'),
-  ('11111111-1111-4111-8111-111111111201', 'CALM', 60, 1, true, 0, 'ICON', '🤝'),
-  ('11111111-1111-4111-8111-111111111202', 'JOY', 60, 1, true, 0, 'ICON', '🎂'),
-  ('11111111-1111-4111-8111-111111111203', 'SAD', 60, 1, true, 0, 'ICON', '💬'),
-  ('11111111-1111-4111-8111-111111111301', 'JOY', 60, 1, true, 0, 'ICON', '😊'),
-  ('11111111-1111-4111-8111-111111111302', 'SAD', 60, 1, true, 0, 'ICON', '😢'),
-  ('11111111-1111-4111-8111-111111111303', 'ANGRY', 60, 1, true, 0, 'ICON', '😡')
+  ('11111111-1111-4111-8111-111111111101', 'JOY', 60, 1, true, 0, 'ICON', '😊', '{"kind":"CHOOSE_EMOTION","question":"Ai đang {emotion} vậy con?","description":"Hãy chạm vào bức ảnh đúng nhé!","options":[{"label":"Vui","emotion":"JOY","value":"JOY","imageUrl":"","src":"😊"},{"label":"Buồn","emotion":"SAD","value":"SAD","imageUrl":"","src":"😢"},{"label":"Tức giận","emotion":"ANGRY","value":"ANGRY","imageUrl":"","src":"😡"},{"label":"Sợ","emotion":"FEAR","value":"FEAR","imageUrl":"","src":"😟"}],"correctIndex":0}'::jsonb),
+  ('11111111-1111-4111-8111-111111111102', 'SAD', 60, 1, true, 0, 'ICON', '😢', '{"kind":"CHOOSE_EMOTION","question":"Ai đang {emotion} vậy con?","description":"Hãy chạm vào bức ảnh đúng nhé!","options":[{"label":"Vui","emotion":"JOY","value":"JOY","imageUrl":"","src":"😊"},{"label":"Buồn","emotion":"SAD","value":"SAD","imageUrl":"","src":"😢"},{"label":"Tức giận","emotion":"ANGRY","value":"ANGRY","imageUrl":"","src":"😡"},{"label":"Sợ","emotion":"FEAR","value":"FEAR","imageUrl":"","src":"😟"}],"correctIndex":1}'::jsonb),
+  ('11111111-1111-4111-8111-111111111103', 'CALM', 60, 1, true, 0, 'ICON', '😌', '{"kind":"CHOOSE_EMOTION","question":"Ai đang {emotion} vậy con?","description":"Hãy chạm vào bức ảnh đúng nhé!","options":[{"label":"Tức giận","emotion":"ANGRY","value":"ANGRY","imageUrl":"","src":"😡"},{"label":"Sợ","emotion":"FEAR","value":"FEAR","imageUrl":"","src":"😟"},{"label":"Bình tĩnh","emotion":"CALM","value":"CALM","imageUrl":"","src":"😌"},{"label":"Buồn","emotion":"SAD","value":"SAD","imageUrl":"","src":"😢"}],"correctIndex":2}'::jsonb),
+  ('11111111-1111-4111-8111-111111111201', 'CALM', 60, 1, true, 0, 'ICON', '🤝', '{"kind":"CHOOSE_REACTION","question":"Bạn bị ngã rồi. Con sẽ làm gì?","promptImageUrl":"🤝","options":[{"label":"Bỏ đi","emotion":"NEUTRAL","value":"LEAVE","imageUrl":"","src":"🚶"},{"label":"Cười","emotion":"JOY","value":"LAUGH","imageUrl":"","src":"😆"},{"label":"An ủi","emotion":"NEUTRAL","value":"COMFORT","imageUrl":"","src":"🤝"}],"correctIndexes":[2]}'::jsonb),
+  ('11111111-1111-4111-8111-111111111202', 'JOY', 60, 1, true, 0, 'ICON', '🎂', '{"kind":"CHOOSE_REACTION","question":"Mẹ tặng bánh sinh nhật. Con sẽ làm gì?","promptImageUrl":"🎂","options":[{"label":"Chạy đi","emotion":"NEUTRAL","value":"LEAVE","imageUrl":"","src":"🚶"},{"label":"Vui lên","emotion":"JOY","value":"LAUGH","imageUrl":"","src":"😆"},{"label":"Ôm mẹ","emotion":"NEUTRAL","value":"COMFORT","imageUrl":"","src":"🤝"}],"correctIndexes":[1,2]}'::jsonb),
+  ('11111111-1111-4111-8111-111111111203', 'SAD', 60, 1, true, 0, 'ICON', '💬', '{"kind":"CHOOSE_REACTION","question":"Bạn đang buồn. Con sẽ phản ứng thế nào?","promptImageUrl":"💬","options":[{"label":"Bỏ đi","emotion":"NEUTRAL","value":"LEAVE","imageUrl":"","src":"🚶"},{"label":"Cười","emotion":"JOY","value":"LAUGH","imageUrl":"","src":"😆"},{"label":"An ủi","emotion":"NEUTRAL","value":"COMFORT","imageUrl":"","src":"🤝"}],"correctIndexes":[2]}'::jsonb),
+  ('11111111-1111-4111-8111-111111111301', 'JOY', 60, 1, true, 0, 'ICON', '😊', '{}'::jsonb),
+  ('11111111-1111-4111-8111-111111111302', 'SAD', 60, 1, true, 0, 'ICON', '😢', '{}'::jsonb),
+  ('11111111-1111-4111-8111-111111111303', 'ANGRY', 60, 1, true, 0, 'ICON', '😡', '{}'::jsonb)
 ON CONFLICT ("id") DO UPDATE
 SET
   "target_emotion" = EXCLUDED."target_emotion",
@@ -632,4 +633,5 @@ SET
   "is_default" = EXCLUDED."is_default",
   "unlock_star_cost" = EXCLUDED."unlock_star_cost",
   "prompt_asset_type" = EXCLUDED."prompt_asset_type",
-  "prompt_asset_url" = EXCLUDED."prompt_asset_url";
+  "prompt_asset_url" = EXCLUDED."prompt_asset_url",
+  "config" = EXCLUDED."config";
