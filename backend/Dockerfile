@@ -1,5 +1,5 @@
 FROM oven/bun:alpine AS base
-RUN apk add --no-cache ffmpeg
+RUN apk add --no-cache ffmpeg font-noto font-dejavu
 WORKDIR /app
 
 FROM base AS dev

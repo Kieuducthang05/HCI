@@ -414,9 +414,10 @@ export async function exportChildSummaryPdf(
     const fromDate = range.fromIso.slice(0, 10);
     const toDate = range.toIso.slice(0, 10);
 
+    const pdfBytes = await createSimplePdf(lines);
     return {
       fileName: `hmi-child-summary-${childId}-${fromDate}-to-${toDate}.pdf`,
-      pdfBytes: createSimplePdf(lines),
+      pdfBytes,
     };
   } catch (error: unknown) {
     if (error instanceof AppError) {

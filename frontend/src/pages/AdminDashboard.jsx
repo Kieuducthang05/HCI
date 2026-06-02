@@ -51,6 +51,8 @@ const emptyPetForm = {
   animationUrl: '',
   unlockStarCost: 100,
   status: 'ACTIVE',
+  imageFile: null,
+  imagePreviewUrl: '',
 }
 
 const reactionOptionDetails = {
@@ -239,6 +241,8 @@ function toPetForm(pet) {
     animationUrl: pet.animation_url || '',
     unlockStarCost: pet.unlock_star_cost || 0,
     status: pet.status || 'ACTIVE',
+    imageFile: null,
+    imagePreviewUrl: '',
   }
 }
 
@@ -503,6 +507,15 @@ export default function AdminDashboard() {
     }
   }, [contentForm.mediaPreviewUrl])
 
+  useEffect(() => {
+    const imagePreviewUrl = petForm.imagePreviewUrl
+    return () => {
+      if (isObjectUrl(imagePreviewUrl)) {
+        URL.revokeObjectURL(imagePreviewUrl)
+      }
+    }
+  }, [petForm.imagePreviewUrl])
+
   const handleLogout = async () => {
     try {
       await authApi.signOut()
@@ -676,44 +689,53 @@ export default function AdminDashboard() {
     }
   }
 
-  const handlePetImageUpload = async (event) => {
+  const handlePetImageUpload = (event) => {
     const input = event.target
     const file = input.files?.[0]
     if (!file) return
 
-    try {
-      setPetMediaUploading(true)
-      setError('')
-      const result = await adminApi.uploadMedia({
-        file,
-        purpose: 'PET_IMAGE',
-      })
-      const imageUrl = result.media_asset?.storage_key || result.media_asset?.url
-      if (!imageUrl) {
-        throw new Error('Backend chưa trả về đường dẫn ảnh pet.')
-      }
-
-      setPetForm((form) => ({ ...form, imageUrl }))
-      setMessage('Đã tải ảnh pet lên và liên kết với form.')
-    } catch (err) {
-      setError(err.message || 'Không tải ảnh pet lên được.')
-    } finally {
-      setPetMediaUploading(false)
-      input.value = ''
+    if (isObjectUrl(petForm.imagePreviewUrl)) {
+      URL.revokeObjectURL(petForm.imagePreviewUrl)
     }
+
+    const previewUrl = URL.createObjectURL(file)
+    setPetForm((form) => ({
+      ...form,
+      imageFile: file,
+      imagePreviewUrl: previewUrl,
+    }))
+    input.value = ''
   }
 
   const handlePetSubmit = async (event) => {
     event.preventDefault()
     try {
       setLoading(true)
-      if (!petForm.imageUrl.trim()) {
-        throw new Error('Vui lòng tải ảnh pet trước khi lưu.')
+      
+      let imageUrl = petForm.imageUrl.trim()
+      
+      if (petForm.imageFile) {
+        setPetMediaUploading(true)
+        setError('')
+        const result = await adminApi.uploadMedia({
+          file: petForm.imageFile,
+          purpose: 'PET_IMAGE',
+        })
+        const uploadedUrl = result.media_asset?.storage_key || result.media_asset?.url
+        if (!uploadedUrl) {
+          throw new Error('Backend chưa trả về đường dẫn ảnh pet.')
+        }
+        imageUrl = uploadedUrl
       }
+      
+      if (!imageUrl) {
+        throw new Error('Vui lòng chọn ảnh pet trước khi lưu.')
+      }
+      
       const payload = {
         name: petForm.name.trim(),
         description: petForm.description || null,
-        image_url: petForm.imageUrl.trim(),
+        image_url: imageUrl,
         animation_url: petForm.animationUrl || null,
         unlock_star_cost: Number(petForm.unlockStarCost),
         status: petForm.status,
@@ -725,14 +747,27 @@ export default function AdminDashboard() {
         await adminApi.createPet(payload)
         setMessage('Đã tạo pet mới.')
       }
+      
+      if (isObjectUrl(petForm.imagePreviewUrl)) {
+        URL.revokeObjectURL(petForm.imagePreviewUrl)
+      }
       setPetForm(emptyPetForm)
       setEditingPetId('')
       await loadAdminData()
     } catch (err) {
       setError(err.message || 'Không lưu được pet.')
     } finally {
+      setPetMediaUploading(false)
       setLoading(false)
     }
+  }
+
+  const handleCancelPetEdit = () => {
+    if (isObjectUrl(petForm.imagePreviewUrl)) {
+      URL.revokeObjectURL(petForm.imagePreviewUrl)
+    }
+    setEditingPetId('')
+    setPetForm(emptyPetForm)
   }
 
   const handleDeleteContent = async (contentId) => {
@@ -1172,17 +1207,27 @@ export default function AdminDashboard() {
                   </select>
                 </AdminField>
                 <AdminField label="Ảnh pet">
-                  <label className={`admin-upload-control ${petMediaUploading ? 'disabled' : ''}`}>
-                    <FiUpload aria-hidden="true" />
-                    {petMediaUploading ? 'Đang tải...' : 'Tải ảnh'}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      disabled={petMediaUploading}
-                      onChange={handlePetImageUpload}
-                    />
-                  </label>
-                  {petForm.imageUrl && <span className="admin-file-state">Đã có ảnh pet</span>}
+                  <div className="admin-pet-image-upload-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(petForm.imagePreviewUrl || petForm.imageUrl) && (
+                      <div className="admin-pet-image-preview">
+                        <img 
+                          src={petForm.imagePreviewUrl || petForm.imageUrl} 
+                          alt="Preview pet" 
+                          style={{ maxWidth: '120px', maxHeight: '120px', borderRadius: '8px', objectFit: 'contain', border: '1px solid #e2e8f0' }} 
+                        />
+                      </div>
+                    )}
+                    <label className={`admin-upload-control ${petMediaUploading ? 'disabled' : ''}`}>
+                      <FiUpload aria-hidden="true" />
+                      {petMediaUploading ? 'Đang tải...' : 'Tải ảnh'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={petMediaUploading}
+                        onChange={handlePetImageUpload}
+                      />
+                    </label>
+                  </div>
                 </AdminField>
               </div>
               <AdminField label="Mô tả pet" className="admin-field-full">
@@ -1194,7 +1239,7 @@ export default function AdminDashboard() {
                   {editingPetId ? 'Lưu thay đổi' : 'Tạo pet'}
                 </button>
                 {editingPetId && (
-                  <button type="button" onClick={() => { setEditingPetId(''); setPetForm(emptyPetForm) }}>
+                  <button type="button" onClick={handleCancelPetEdit}>
                     <FiX aria-hidden="true" />
                     Hủy
                   </button>
