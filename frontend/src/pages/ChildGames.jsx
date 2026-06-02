@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
+import { FiArrowLeft, FiHeart, FiSmile } from 'react-icons/fi'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
 import { contentApi, getSelectedChild, setSelectedChild, trackingApi, visionApi } from '../services/api'
 import { captureDetectedFace } from '../utils/faceCapture'
@@ -408,33 +409,20 @@ function ReactionChoiceArt({ option = {}, variant = 'comfort' }) {
 
 const gameOptions = [
   {
-    id: 'emotionImitation',
-    title: '🎭 Bắt chước cảm xúc',
-    description: 'Sử dụng camera để bắt chước các biểu cảm',
-    icon: '📸',
-  },
-  {
     id: 'chooseEmotion',
-    title: '🎯 Chọn cảm xúc đúng',
-    description: 'Xem câu hỏi và chọn biểu cảm đúng',
-    icon: '😊',
+    label: 'Chọn cảm xúc đúng',
+    Icon: FiSmile,
   },
   {
     id: 'chooseReaction',
-    title: '⚡ Chọn cách phản ứng',
-    description: 'Xử lý tình huống đúng cách',
-    icon: '⚡',
-  },
-  {
-    id: 'matchEmotion',
-    title: '🎭 Biểu cảm đúng',
-    description: 'Làm theo biểu cảm để model kiểm tra',
-    icon: '🎭',
+    label: 'Chọn cách phản ứng',
+    Icon: FiHeart,
   },
 ]
 
 export default function ChildGames() {
   const { setUserStars } = useOutletContext()
+  const navigate = useNavigate()
   const selectedChild = getSelectedChild()
   const videoRef = useRef(null)
   const streamRef = useRef(null)
@@ -519,6 +507,10 @@ export default function ChildGames() {
     setScore(0)
     setFeedback(null)
     setSessionStartTime(null)
+  }
+
+  const backToHome = () => {
+    navigate('/child/home')
   }
 
   const getFeedbackInfo = () => {
@@ -681,7 +673,15 @@ export default function ChildGames() {
   if (!currentGame) {
     return (
       <div className="child-games-menu">
-        <h2 className="games-title">🎮 Chọn trò chơi</h2>
+        <div className="games-menu-header">
+          <button type="button" className="games-back-btn" onClick={backToHome}>
+            <FiArrowLeft className="games-back-icon" aria-hidden="true" />
+            <span>Quay lại</span>
+          </button>
+          <span className="games-menu-header-spacer" aria-hidden="true"></span>
+        </div>
+
+        <h2 className="games-title">Chọn trò chơi</h2>
         {(contentError || !selectedChild?.id) && (
           <p className="camera-error">
             {contentError || 'Chưa chọn tài khoản trẻ nên điểm sao sẽ chưa được lưu.'}
@@ -690,12 +690,19 @@ export default function ChildGames() {
 
         <div className="games-grid">
           {gameOptions.map((game) => (
-            <div key={game.id} className="game-card" onClick={() => startGame(game.id)}>
-              <div className="game-icon">{game.icon}</div>
-              <h3 className="game-title">{game.title}</h3>
-              <p className="game-description">{game.description}</p>
-              <button className="play-btn">Chơi →</button>
-            </div>
+            <button
+              key={game.id}
+              type="button"
+              className={`game-card game-card-${game.id}`}
+              onClick={() => startGame(game.id)}
+              aria-label={game.label}
+              title={game.label}
+            >
+              <span className="game-icon" aria-hidden="true">
+                <game.Icon />
+              </span>
+              <span className="game-card-title">{game.label}</span>
+            </button>
           ))}
         </div>
       </div>
@@ -778,6 +785,14 @@ export default function ChildGames() {
       <div className="choose-emotion-game game-play-shell game1-shell">
         {feedbackOverlay}
 
+        <div className="games-menu-header">
+          <button type="button" className="games-back-btn" onClick={backToMenu}>
+            <FiArrowLeft className="games-back-icon" aria-hidden="true" />
+            <span>Quay lại</span>
+          </button>
+          <span className="games-menu-header-spacer" aria-hidden="true"></span>
+        </div>
+
         <div className="choose-emotion-content">
           <h2 className="game1-title">
             {hasEmotionSlot ? (
@@ -826,6 +841,14 @@ export default function ChildGames() {
       <div className="game-play-shell game2-shell">
         {feedbackOverlay}
 
+        <div className="games-menu-header">
+          <button type="button" className="games-back-btn" onClick={backToMenu}>
+            <FiArrowLeft className="games-back-icon" aria-hidden="true" />
+            <span>Quay lại</span>
+          </button>
+          <span className="games-menu-header-spacer" aria-hidden="true"></span>
+        </div>
+
         <ReactionScenarioArt data={currentGameData} />
 
         <div className="game2-reactions-grid">
@@ -850,7 +873,6 @@ export default function ChildGames() {
   return (
     <ExpressionGame
       data={currentGameData}
-      score={displayStars}
       currentIndex={gameIndex}
       total={activeGameList.length}
       selectedChild={selectedChild}
@@ -862,7 +884,6 @@ export default function ChildGames() {
 
 function ExpressionGame({
   data,
-  score,
   currentIndex,
   total,
   selectedChild,

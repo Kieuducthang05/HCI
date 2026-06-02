@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { FiBookOpen, FiSmile } from 'react-icons/fi'
+import { FiArrowLeft, FiArrowRight, FiCheckCircle, FiPause, FiPlay } from 'react-icons/fi'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
 import { contentApi, getSelectedChild, setSelectedChild, trackingApi } from '../services/api'
 import { captureDetectedFace } from '../utils/faceCapture'
@@ -144,10 +144,19 @@ function makeSessionKey(contentId) {
   return `learn-${contentId}-${Date.now()}`
 }
 
+function hasVideoReachedCompletionPoint(video) {
+  const duration = Number(video?.duration)
+  const currentTime = Number(video?.currentTime)
+
+  if (!Number.isFinite(duration) || duration <= 0 || !Number.isFinite(currentTime)) return false
+
+  const completionPoint = Math.max(duration - 2, duration * 0.9)
+  return currentTime >= completionPoint
+}
+
 export default function ChildLearn() {
   const { setUserStars } = useOutletContext()
   const selectedChild = getSelectedChild()
-  const [currentTab, setCurrentTab] = useState('LECTURE')
   const [contents, setContents] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showResult, setShowResult] = useState(null)
@@ -180,10 +189,11 @@ export default function ChildLearn() {
   }, [selectedChild?.id])
 
   const tabContents = useMemo(
-    () => (currentTab === 'EXPRESS' ? [] : contents.filter((content) => content.type === currentTab)),
-    [contents, currentTab],
+    () => contents.filter((content) => content.type === 'LECTURE'),
+    [contents],
   )
   const current = tabContents[currentIndex]
+  const hasMultipleLecturePages = tabContents.length > 1
 
   const updateStars = (totalStars) => {
     if (typeof totalStars !== 'number') return
@@ -226,7 +236,7 @@ export default function ChildLearn() {
         completed_at: now,
         metadata: {
           source: 'child-learn-page',
-          tab: currentTab,
+          tab: 'LECTURE',
         },
       }
 
@@ -261,14 +271,6 @@ export default function ChildLearn() {
     }
   }
 
-  const switchTab = (tab) => {
-    setCurrentTab(tab)
-    setCurrentIndex(0)
-    setShowResult(null)
-    setLastOutcome(null)
-    setError('')
-  }
-
   const handleNext = () => {
     setCurrentIndex((index) => Math.min(index + 1, tabContents.length - 1))
   }
@@ -296,7 +298,6 @@ export default function ChildLearn() {
   const handleContinueResult = () => {
     setShowResult(null)
     setLastOutcome(null)
-    if (currentTab === 'EXPRESS') return
 
     if (currentIndex < tabContents.length - 1) {
       setCurrentIndex((index) => index + 1)
@@ -308,18 +309,6 @@ export default function ChildLearn() {
   const handleDismissResult = () => {
     setShowResult(null)
     setLastOutcome(null)
-  }
-
-  const handleExpressionResult = ({ isCorrect, targetEmotion, detectedEmotion, confidence }) => {
-    const confidencePercent = Math.round(confidence * 100)
-    setLastOutcome({
-      starsEarned: 0,
-      rewardLabel: isCorrect ? 'Đã kiểm tra' : 'Chưa đúng',
-      explanation: isCorrect
-        ? `Model nhận ra biểu cảm ${targetEmotion.label} với độ tin cậy ${confidencePercent}%.`
-        : `Mục tiêu là ${targetEmotion.label}, model đang thấy gần với ${detectedEmotion.label}.`,
-    })
-    setShowResult(isCorrect ? 'correct' : 'incorrect')
   }
 
   if (!selectedChild?.id) {
@@ -368,35 +357,24 @@ export default function ChildLearn() {
         />
       )}
 
-      <div className="lesson-tabs">
-        <button className={`tab ${currentTab === 'LECTURE' ? 'active' : ''}`} onClick={() => switchTab('LECTURE')}>
-          <FiBookOpen className="tab-icon" aria-hidden="true" />
-          <span>Bài học</span>
-        </button>
-        <button className={`tab ${currentTab === 'EXPRESS' ? 'active' : ''}`} onClick={() => switchTab('EXPRESS')}>
-          <FiSmile className="tab-icon" aria-hidden="true" />
-          <span>Thể hiện cảm xúc</span>
-        </button>
-      </div>
-
       {error && <p className="camera-error">{error}</p>}
 
-      {currentTab === 'EXPRESS' ? (
-        <ExpressionLesson
-          selectedChild={selectedChild}
-          onResult={handleExpressionResult}
-        />
-      ) : !current ? (
+      {!current ? (
         <div className="lesson-card">
           <h2>Chưa có nội dung bài học từ backend</h2>
           <p>Hãy tạo nội dung trong trang Admin hoặc chạy lại seed database.</p>
         </div>
       ) : (
         <div className="lesson-card lesson-lecture-card">
-          <LectureContent content={current} onComplete={handleCompleteLecture} />
+          <LectureContent key={current.id || currentIndex} content={current} onComplete={handleCompleteLecture} />
 
           <div className="lesson-navigation">
-            <button className="nav-btn" onClick={handlePrev} disabled={currentIndex === 0}>← Trước</button>
+            {hasMultipleLecturePages && (
+              <button className="nav-btn" onClick={handlePrev} disabled={currentIndex === 0}>
+                <FiArrowLeft className="nav-btn-icon" aria-hidden="true" />
+                <span>Trước</span>
+              </button>
+            )}
 
             <div className="progress">
               <span className="progress-text">{currentIndex + 1} / {tabContents.length}</span>
@@ -405,7 +383,12 @@ export default function ChildLearn() {
               </div>
             </div>
 
-            <button className="nav-btn" onClick={handleNext} disabled={currentIndex === tabContents.length - 1}>Tiếp →</button>
+            {hasMultipleLecturePages && (
+              <button className="nav-btn" onClick={handleNext} disabled={currentIndex === tabContents.length - 1}>
+                <span>Tiếp</span>
+                <FiArrowRight className="nav-btn-icon" aria-hidden="true" />
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -444,23 +427,132 @@ function LinkedMedia({ source, title }) {
   )
 }
 
-function ContentMedia({ media, fallback = '🙂', title = 'media bài học' }) {
+function LessonVideoPlayer({ source, title, onVideoNearlyComplete }) {
+  const videoRef = useRef(null)
+  const hideControlsTimerRef = useRef(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isControlsVisible, setIsControlsVisible] = useState(true)
+
+  useEffect(() => {
+    return () => {
+      if (hideControlsTimerRef.current) {
+        clearTimeout(hideControlsTimerRef.current)
+      }
+    }
+  }, [])
+
+  const clearHideControlsTimer = () => {
+    if (hideControlsTimerRef.current) {
+      clearTimeout(hideControlsTimerRef.current)
+      hideControlsTimerRef.current = null
+    }
+  }
+
+  const scheduleControlsHide = () => {
+    clearHideControlsTimer()
+    hideControlsTimerRef.current = setTimeout(() => {
+      setIsControlsVisible(false)
+      hideControlsTimerRef.current = null
+    }, 2500)
+  }
+
+  const showControlsTemporarily = () => {
+    setIsControlsVisible(true)
+
+    const video = videoRef.current
+    if (video && !video.paused && !video.ended) {
+      scheduleControlsHide()
+    } else {
+      clearHideControlsTimer()
+    }
+  }
+
+  const handleVideoProgress = (event) => {
+    if (hasVideoReachedCompletionPoint(event.currentTarget)) {
+      onVideoNearlyComplete?.()
+    }
+  }
+
+  const handleVideoPlay = () => {
+    setIsPlaying(true)
+    setIsControlsVisible(true)
+    scheduleControlsHide()
+  }
+
+  const handleVideoPause = () => {
+    setIsPlaying(false)
+    setIsControlsVisible(true)
+    clearHideControlsTimer()
+  }
+
+  const togglePlayback = async () => {
+    const video = videoRef.current
+    if (!video) return
+
+    if (video.paused || video.ended) {
+      try {
+        await video.play()
+      } catch {
+        handleVideoPause()
+      }
+      return
+    }
+
+    video.pause()
+  }
+
+  return (
+    <div className="lesson-media-frame lesson-media-video-frame">
+      <div
+        className="lesson-video-player"
+        onMouseMove={showControlsTemporarily}
+        onTouchStart={showControlsTemporarily}
+      >
+        <video
+          ref={videoRef}
+          className="lesson-media-video"
+          src={source}
+          preload="metadata"
+          playsInline
+          onLoadedMetadata={handleVideoProgress}
+          onTimeUpdate={handleVideoProgress}
+          onPlay={handleVideoPlay}
+          onPause={handleVideoPause}
+          onEnded={(event) => {
+            handleVideoPause()
+            onVideoNearlyComplete?.()
+            handleVideoProgress(event)
+          }}
+          aria-label={`Video ${title}`}
+        />
+        <div
+          className={`lesson-video-overlay ${isPlaying && !isControlsVisible ? 'is-hidden' : ''}`}
+          aria-hidden={isPlaying && !isControlsVisible}
+        >
+          <button
+            type="button"
+            className={`lesson-video-control ${isPlaying ? 'playing' : ''}`}
+            onClick={togglePlayback}
+            aria-label={isPlaying ? 'Tạm dừng video' : 'Phát video'}
+          >
+            {isPlaying ? (
+              <FiPause className="lesson-video-control-icon" aria-hidden="true" />
+            ) : (
+              <FiPlay className="lesson-video-control-icon play-icon" aria-hidden="true" />
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ContentMedia({ media, fallback = '🙂', title = 'media bài học', onVideoNearlyComplete }) {
   const source = String(media || '').trim()
   const mediaKind = getMediaKind(source)
 
   if (source && mediaKind === 'video') {
-    return (
-      <div className="lesson-media-frame lesson-media-video-frame">
-        <video
-          className="lesson-media-video"
-          src={source}
-          controls
-          preload="metadata"
-          playsInline
-          aria-label={`Video ${title}`}
-        />
-      </div>
-    )
+    return <LessonVideoPlayer source={source} title={title} onVideoNearlyComplete={onVideoNearlyComplete} />
   }
 
   if (source && mediaKind === 'image') {
@@ -485,15 +577,33 @@ function ContentMedia({ media, fallback = '🙂', title = 'media bài học' }) 
 function LectureContent({ content, onComplete }) {
   const media = getContentMedia(content)
   const description = getContentDescription(content)
+  const requiresVideoWatch = getMediaKind(media) === 'video'
+  const [hasWatchedVideoEnd, setHasWatchedVideoEnd] = useState(!requiresVideoWatch)
+  const canComplete = !requiresVideoWatch || hasWatchedVideoEnd
+
+  const handleCompleteClick = () => {
+    if (!canComplete) return
+    onComplete()
+  }
 
   return (
     <div className="emotion-card">
-      <ContentMedia media={media} title={content.title} />
+      <ContentMedia
+        media={media}
+        title={content.title}
+        onVideoNearlyComplete={() => setHasWatchedVideoEnd(true)}
+      />
       <h2 className="emotion-title">{content.title}</h2>
       <p className="emotion-description">{description}</p>
 
-      <button className="learn-complete-btn" onClick={onComplete}>
-        Hoàn thành bài học
+      <button
+        className="learn-complete-btn"
+        onClick={handleCompleteClick}
+        disabled={!canComplete}
+        aria-label={canComplete ? 'Hoàn thành bài học' : 'Xem gần hết video để hoàn thành bài học'}
+      >
+        <FiCheckCircle className="learn-complete-icon" aria-hidden="true" />
+        <span>Hoàn thành bài học</span>
       </button>
     </div>
   )
