@@ -73,23 +73,31 @@ function QuizContent({ content, onAnswer, answerDisabled }) {
   const answers = quiz.answer_emotions || []
   const question = quiz.description || content.title
   const hasImage = getMediaKind(quiz.media_url) === 'image'
+  const isCompleted = isQuizRewarded(content)
 
   return (
     <div className={`question-quiz-content ${hasImage ? 'has-image' : 'text-only'}`}>
       {hasImage && <QuizImage media={quiz.media_url} title={content.title} />}
       <div className="quiz-section">
         <p className="quiz-question">{question}</p>
+        {isCompleted && (
+          <p style={{ color: '#2b8a3e', fontWeight: 800, textAlign: 'center', marginBottom: '12px', fontSize: '15px' }}>
+            🎉 Con đã hoàn thành câu hỏi này!
+          </p>
+        )}
         <div className="quiz-options">
           {answers.map((answer) => {
             const info = emotionInfo(answer)
+            const isCorrect = normalizeEmotion(answer) === normalizeEmotion(quiz.correct_emotion)
             return (
               <button
                 key={answer}
-                className="quiz-option-btn"
+                className={`quiz-option-btn ${isCompleted && isCorrect ? 'correct-completed' : ''}`}
                 onClick={() => onAnswer(answer)}
-                disabled={answerDisabled}
+                disabled={answerDisabled || isCompleted}
                 aria-label={info.label}
                 title={info.label}
+                style={isCompleted && isCorrect ? { border: '3px solid #2b8a3e', background: '#ebfbee' } : {}}
               >
                 <span className="quiz-option-emoji">{info.emoji}</span>
               </button>
@@ -136,10 +144,14 @@ export default function ChildQuestions() {
     contentApi.list(selectedChild.id, { type: 'QUIZ', include_locked: true })
       .then((result) => {
         if (!mounted) return
-        const playableQuizzes = getPlayableQuizzes(result.contents || [])
-        setQuestions(playableQuizzes)
-        setCurrentIndex(0)
-        setShowNoQuestionsDialog(playableQuizzes.length === 0)
+        const quizzes = result.contents || []
+        setQuestions(quizzes)
+        
+        // Find index of first uncompleted question
+        const firstUncompleted = quizzes.findIndex((q) => !isQuizRewarded(q))
+        setCurrentIndex(firstUncompleted !== -1 ? firstUncompleted : 0)
+        
+        setShowNoQuestionsDialog(quizzes.length === 0)
         setError('')
       })
       .catch((err) => {
@@ -162,16 +174,6 @@ export default function ChildQuestions() {
 
   const leaveQuestionScreen = () => {
     navigate('/child/home', { replace: true })
-  }
-
-  const removeQuestionFromPlayableList = (contentId) => {
-    const remainingQuestions = questions.filter((question) => question.id !== contentId)
-    setQuestions(remainingQuestions)
-    setCurrentIndex((index) => Math.min(index, Math.max(remainingQuestions.length - 1, 0)))
-
-    if (remainingQuestions.length === 0) {
-      setShowNoQuestionsDialog(true)
-    }
   }
 
   const ensureUnlocked = async (content) => {
@@ -243,7 +245,7 @@ export default function ChildQuestions() {
   const handleAnswer = async (selectedEmotion) => {
     if (!current || showResult || submittingAnswer) return
     if (isQuizRewarded(current)) {
-      removeQuestionFromPlayableList(current.id)
+      handleNext()
       return
     }
 
@@ -259,7 +261,7 @@ export default function ChildQuestions() {
       })
 
       if (result.alreadyCompleted) {
-        removeQuestionFromPlayableList(current.id)
+        handleNext()
         return
       }
 
@@ -278,21 +280,25 @@ export default function ChildQuestions() {
   }
 
   const handleContinueResult = () => {
-    const completedContentId = lastOutcome?.completedContentId
-    const shouldRemoveCompletedQuiz = Boolean(completedContentId && lastOutcome?.starsEarned > 0)
-
     setShowResult(null)
     setLastOutcome(null)
 
-    if (shouldRemoveCompletedQuiz) {
-      removeQuestionFromPlayableList(completedContentId)
-      return
-    }
+    // Find the next uncompleted question starting from currentIndex + 1
+    const nextUncompletedIndex = questions.findIndex(
+      (quiz, idx) => idx > currentIndex && !isQuizRewarded(quiz)
+    )
 
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex((index) => index + 1)
+    if (nextUncompletedIndex !== -1) {
+      setCurrentIndex(nextUncompletedIndex)
     } else {
-      setCurrentIndex(0)
+      // Check if there are any uncompleted questions anywhere in the list
+      const anyUncompletedIndex = questions.findIndex((quiz) => !isQuizRewarded(quiz))
+      if (anyUncompletedIndex !== -1) {
+        setCurrentIndex(anyUncompletedIndex)
+      } else {
+        // All questions completed!
+        setShowNoQuestionsDialog(true)
+      }
     }
   }
 

@@ -24,6 +24,14 @@ export default function ParentShop() {
   const [ownedPetIds, setOwnedPetIds] = useState(new Set())
   const [toast, setToast] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+
+  useEffect(() => {
+    if (!dropdownOpen) return undefined
+    const closeDropdown = () => setDropdownOpen(false)
+    window.addEventListener('click', closeDropdown)
+    return () => window.removeEventListener('click', closeDropdown)
+  }, [dropdownOpen])
 
   useEffect(() => {
     if (!toast) return undefined
@@ -99,9 +107,9 @@ export default function ParentShop() {
     return shopItems.filter((item) => item.category === selectedCategory && !ownedPetIds.has(item.id))
   }, [ownedPetIds, selectedCategory, shopItems])
 
-  const handleSelectChild = (e) => {
-    const nextChild = children.find((item) => item.id === e.target.value)
-    setChildId(e.target.value)
+  const handleSelectChild = (targetId) => {
+    const nextChild = children.find((item) => item.id === targetId)
+    setChildId(targetId)
     setUserStars(nextChild?.total_stars || 0)
     setSelectedChild(nextChild || null)
   }
@@ -168,11 +176,45 @@ export default function ParentShop() {
             <span className="stars-icon" aria-hidden="true">★</span>
             <span>{userStars.toLocaleString()}</span>
           </span>
-          <select className="text-input" value={childId} onChange={handleSelectChild}>
-            {children.map((child) => (
-              <option key={child.id} value={child.id}>Bé {child.nickname}</option>
-            ))}
-          </select>
+          <div className="child-dropdown-container" style={{ marginLeft: '12px' }}>
+            <button
+              type="button"
+              className="child-badge small"
+              onClick={(e) => {
+                e.stopPropagation()
+                setDropdownOpen(!dropdownOpen)
+              }}
+              aria-haspopup="listbox"
+              aria-expanded={dropdownOpen}
+            >
+              <span className="child-badge-avatar">🧒</span>
+              <span className="child-badge-name">
+                Bé {children.find((c) => c.id === childId)?.nickname || '...'}
+              </span>
+              <span className={`dropdown-chevron ${dropdownOpen ? 'open' : ''}`}>▼</span>
+            </button>
+
+            {dropdownOpen && (
+              <div className="child-dropdown-menu" role="listbox">
+                {children.map((child) => (
+                  <button
+                    key={child.id}
+                    type="button"
+                    role="option"
+                    aria-selected={child.id === childId}
+                    className={`child-dropdown-item ${child.id === childId ? 'selected' : ''}`}
+                    onClick={() => {
+                      handleSelectChild(child.id)
+                      setDropdownOpen(false)
+                    }}
+                  >
+                    <span className="item-avatar">🧒</span>
+                    <span className="item-name">Bé {child.nickname}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

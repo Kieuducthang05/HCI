@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { childrenApi, setSelectedChild, trackingApi } from '../services/api'
+import { childrenApi, setSelectedChild, trackingApi, getSelectedChild } from '../services/api'
 import '../styles/ParentDashboard.css'
 
 const fallbackWeeklyData = [
@@ -76,6 +76,14 @@ export default function ParentHome() {
   const [dashboard, setDashboard] = useState(null)
   const [error, setError] = useState('')
   const [exporting, setExporting] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+
+  useEffect(() => {
+    if (!dropdownOpen) return undefined
+    const closeDropdown = () => setDropdownOpen(false)
+    window.addEventListener('click', closeDropdown)
+    return () => window.removeEventListener('click', closeDropdown)
+  }, [dropdownOpen])
 
   useEffect(() => {
     let mounted = true
@@ -84,9 +92,11 @@ export default function ParentHome() {
         if (!mounted) return
         const childList = result.children || []
         setChildren(childList)
-        if (childList[0]) {
-          setCurrentChildId(childList[0].id)
-          setSelectedChild(childList[0])
+        const selected = getSelectedChild()
+        const activeChild = childList.find((c) => c.id === selected?.id) || childList[0]
+        if (activeChild) {
+          setCurrentChildId(activeChild.id)
+          setSelectedChild(activeChild)
         }
       })
       .catch((err) => {
@@ -150,9 +160,10 @@ export default function ParentHome() {
     return 'Chào buổi tối'
   }
 
-  const handleSelectChild = (e) => {
-    const child = children.find((item) => item.id === e.target.value)
-    setCurrentChildId(e.target.value)
+  const handleSelectChild = (value) => {
+    const targetId = typeof value === 'string' ? value : value.target.value
+    const child = children.find((item) => item.id === targetId)
+    setCurrentChildId(targetId)
     setSelectedChild(child || null)
   }
 
@@ -206,13 +217,42 @@ export default function ParentHome() {
           <h1 className="greeting-title">{getGreeting()}</h1>
           <p className="greeting-subtitle">Theo dõi hoạt động, điểm sao và cảm xúc của bé trong tuần này.</p>
         </div>
-        <div className="child-badge">
-          <span className="child-badge-avatar">🧒</span>
-          <select value={currentChildId} onChange={handleSelectChild} className="child-badge-name">
-            {children.map((child) => (
-              <option key={child.id} value={child.id}>Bé {child.nickname}</option>
-            ))}
-          </select>
+        <div className="child-dropdown-container">
+          <button 
+            type="button" 
+            className="child-badge" 
+            onClick={(e) => {
+              e.stopPropagation()
+              setDropdownOpen(!dropdownOpen)
+            }}
+            aria-haspopup="listbox"
+            aria-expanded={dropdownOpen}
+          >
+            <span className="child-badge-avatar">🧒</span>
+            <span className="child-badge-name">Bé {currentChild?.nickname || '...'}</span>
+            <span className={`dropdown-chevron ${dropdownOpen ? 'open' : ''}`}>▼</span>
+          </button>
+          
+          {dropdownOpen && (
+            <div className="child-dropdown-menu" role="listbox">
+              {children.map((child) => (
+                <button
+                  key={child.id}
+                  type="button"
+                  role="option"
+                  aria-selected={child.id === currentChildId}
+                  className={`child-dropdown-item ${child.id === currentChildId ? 'selected' : ''}`}
+                  onClick={() => {
+                    handleSelectChild(child.id)
+                    setDropdownOpen(false)
+                  }}
+                >
+                  <span className="item-avatar">🧒</span>
+                  <span className="item-name">Bé {child.nickname}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
