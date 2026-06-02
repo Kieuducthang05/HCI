@@ -507,7 +507,7 @@
 }
 
 .question-page .lesson-card {
-  width: min(100%, 1040px);
+  width: 920px;
   height: calc(100% - 24px);
   min-height: 0;
   margin: 12px auto;
@@ -592,7 +592,6 @@
   display: grid;
   align-content: center;
   gap: clamp(12px, 2vh, 18px);
-  overflow: hidden;
 }
 
 .question-quiz-content.has-image {
@@ -677,7 +676,7 @@
 }
 
 .question-page .quiz-section {
-  width: min(720px, calc(100% - 24px));
+  width: min(960px, calc(100% - 24px));
   margin: 0 auto;
   padding: 0;
   display: grid;
@@ -752,11 +751,12 @@
 .question-page .quiz-options {
   display: flex;
   flex-direction: row;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   max-width: 100%;
   gap: clamp(10px, 1.8vh, 18px);
+  padding: 8px 6px 20px 6px;
 }
 
 .question-page .quiz-option-btn {
@@ -840,6 +840,10 @@
 }
 
 .question-page .lesson-navigation .progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
 }
 
@@ -847,6 +851,8 @@
   color: #2c3e50;
   font-size: 13px;
   font-weight: 900;
+  margin-bottom: 4px;
+  line-height: 1;
 }
 
 .question-empty-overlay {
@@ -1354,7 +1360,7 @@
 
   .question-page .quiz-options {
     max-width: 100%;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 10px;
     margin: 0 auto;
   }
@@ -1405,7 +1411,7 @@
 
   .question-page .quiz-options {
     max-width: 100%;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 8px;
   }
 

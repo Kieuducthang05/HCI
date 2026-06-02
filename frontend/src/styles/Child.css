@@ -2925,13 +2925,6 @@ body.dark-mode {
     border-radius: 24px;
     background: #ffffff;
 }
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    border-radius: 24px;
-    background: #ffffff;
-}
 
 .reaction-scene-image-wrap img {
     width: 100%;
