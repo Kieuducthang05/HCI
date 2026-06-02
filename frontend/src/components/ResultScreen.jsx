@@ -39,6 +39,7 @@ function ResultDialog({
   onContinue,
   onDismiss,
   continueLabel = 'Tiếp tục →',
+  buttonPosition = 'center',
 }) {
   const isIncorrect = variant === 'incorrect'
   const copy = resultCopy[resultType] || resultCopy.question
@@ -53,7 +54,7 @@ function ResultDialog({
 
   return (
     <div
-      className={`result-overlay result-overlay-${variant}`}
+      className={`result-overlay result-overlay-${variant} position-${buttonPosition}`}
       role="dialog"
       aria-modal="true"
       onClick={onDismiss || onContinue}
@@ -80,10 +81,12 @@ function ResultDialog({
 
         <h2 className="result-title">{title}</h2>
 
-        <div className={`result-reward result-reward-${variant}`}>
-          <span className="result-reward-icon" aria-hidden="true">★</span>
-          <span>{displayReward}</span>
-        </div>
+        {!isIncorrect && (
+          <div className={`result-reward result-reward-${variant}`}>
+            <span className="result-reward-icon" aria-hidden="true">★</span>
+            <span>{displayReward}</span>
+          </div>
+        )}
 
         {detailLines.length > 0 && (
           <div className="result-details">
@@ -113,6 +116,7 @@ export function CorrectAnswer({
   bannerText,
   continueLabel = 'Tiếp tục →',
   messages,
+  buttonPosition = 'center',
 }) {
   return (
     <ResultDialog
@@ -126,6 +130,7 @@ export function CorrectAnswer({
       messages={messages}
       onContinue={onContinue}
       onDismiss={onDismiss}
+      buttonPosition={buttonPosition}
     />
   )
 }
@@ -141,6 +146,7 @@ export function IncorrectAnswer({
   bannerText,
   continueLabel = 'Tiếp tục →',
   encouragement = 'Không sao, con đã học thêm được một điều mới.',
+  buttonPosition = 'center',
 }) {
   return (
     <ResultDialog
@@ -155,6 +161,7 @@ export function IncorrectAnswer({
       encouragement={encouragement}
       onContinue={onContinue}
       onDismiss={onDismiss}
+      buttonPosition={buttonPosition}
     />
   )
 }

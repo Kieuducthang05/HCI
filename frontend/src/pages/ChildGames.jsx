@@ -633,19 +633,23 @@ export default function ChildGames() {
   }
 
   const handleContinueFeedback = () => {
+    const wasCorrect = feedback?.isCorrect
     const isLastQuestion = gameIndex >= activeGameList.length - 1
     const scoreAfterAnswer = feedback?.scoreAfterAnswer ?? score
 
     setFeedback(null)
 
-    if (isLastQuestion) {
-      setScore(scoreAfterAnswer)
-      setGameIndex(activeGameList.length)
-      return
-    }
+    if (wasCorrect) {
+      if (isLastQuestion) {
+        setScore(scoreAfterAnswer)
+        backToMenu()
+        return
+      }
 
-    setGameIndex((index) => index + 1)
-    setSessionStartTime(nowMs())
+      setGameIndex((index) => index + 1)
+      setSessionStartTime(nowMs())
+    }
+    // If not correct, stays on same gameIndex so child can try again
   }
 
   const checkImitation = async () => {
@@ -717,31 +721,25 @@ export default function ChildGames() {
         resultType="question"
         reward={feedback.starsEarned}
         title="Hoàn thành xuất sắc!"
-        continueLabel={gameIndex < activeGameList.length - 1 ? 'Tiếp tục →' : 'Xem kết quả →'}
+        continueLabel="Tiếp tục →"
         onContinue={handleContinueFeedback}
+        buttonPosition="bottom-right"
       />
     ) : (
       <IncorrectAnswer
         resultType="question"
         title="Chưa đúng rồi!"
-        continueLabel={gameIndex < activeGameList.length - 1 ? 'Tiếp tục →' : 'Xem kết quả →'}
+        continueLabel="Tiếp tục →"
         explanation={feedback.explanation}
         encouragement="Không sao, bé đã học thêm được một điều mới!"
         onContinue={handleContinueFeedback}
+        buttonPosition="bottom-right"
       />
     )
   )
 
   if (isGameComplete) {
-    return (
-      <CorrectAnswer
-        resultType="game"
-        reward={score}
-        title="Hoàn thành xuất sắc!"
-        continueLabel="Tiếp tục →"
-        onContinue={backToMenu}
-      />
-    )
+    return null // Redundant screen removed, handled in handleContinueFeedback
   }
 
   if (currentGame === 'emotionImitation') {

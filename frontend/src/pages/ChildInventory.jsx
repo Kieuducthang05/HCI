@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getSelectedChild, petsApi } from '../services/api'
+import { getSelectedChild, petsApi, resolveMediaUrl } from '../services/api'
 import '../styles/Child.css'
 
 function activePetStorageKey(childId) {
@@ -14,8 +14,8 @@ function normalizeChildPet(childPet) {
     name: childPet.custom_name || pet.name || 'Vật phẩm',
     originalName: pet.name || 'Vật phẩm',
     description: pet.description || 'Vật phẩm bé đã đổi bằng sao.',
-    imageUrl: pet.image_url,
-    animationUrl: pet.animation_url,
+    imageUrl: resolveMediaUrl(pet.image_url),
+    animationUrl: resolveMediaUrl(pet.animation_url),
     unlockedAt: childPet.unlocked_at,
     cost: pet.unlock_star_cost || 0,
   }
@@ -73,29 +73,30 @@ export default function ChildInventory() {
   }
 
   return (
-    <div className="child-inventory">
-      <div className="inventory-header">
-        <div>
-          <h2>🎒 Kho vật phẩm</h2>
-          <p>Những pet và vật phẩm ba mẹ đã đổi sao cho bé.</p>
+    <div className="child-inventory shop-container">
+      <div className="inventory-header shop-header">
+        <div className="shop-title-section">
+          <h2 className="shop-title">🎒 Kho vật phẩm của bé</h2>
+          <p className="shop-description">Những pet và vật phẩm ba mẹ đã đổi sao cho bé.</p>
         </div>
       </div>
 
-      <div className="inventory-stats">
-        <div className="stat-box">
-          <span className="stat-label">Vật phẩm đã có</span>
-          <span className="stat-value">{inventory.length}</span>
-        </div>
+      <div className="shop-stars-display" style={{ marginBottom: '20px', justifyContent: 'center' }}>
+        <span className="stars-label">Vật phẩm đã có:</span>
+        <span className="stars-amount" style={{ background: '#e0f2fe', color: '#0369a1' }}>
+          <span className="stars-icon" style={{ background: '#7dd3fc' }} aria-hidden="true">✓</span>
+          <span>{inventory.length}</span>
+        </span>
       </div>
 
-      <div className="category-filters">
+      <div className="shop-filters">
         {categories.map((cat) => (
           <button
             key={cat.id}
-            className={`filter-btn ${selectedCategory === cat.id ? 'active' : ''}`}
+            className={`filter-tab ${selectedCategory === cat.id ? 'active' : ''}`}
             onClick={() => setSelectedCategory(cat.id)}
           >
-            <span className="emoji">{cat.emoji}</span>
+            <span className="emoji" style={{ marginRight: '6px' }}>{cat.emoji}</span>
             <span>{cat.label}</span>
           </button>
         ))}
@@ -103,9 +104,9 @@ export default function ChildInventory() {
 
       {error && <p className="inventory-error">{error}</p>}
 
-      <div className="inventory-grid">
+      <div className="shop-items-grid">
         {loading && (
-          <div className="empty-state">
+          <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
             <p>Đang tải kho vật phẩm...</p>
           </div>
         )}
@@ -113,25 +114,38 @@ export default function ChildInventory() {
         {!loading && filtered.length > 0 && filtered.map((item) => {
           const isActive = item.id === activePetId
           return (
-            <div key={item.id} className={`inventory-item ${isActive ? 'active' : ''}`}>
-              <div className="item-display">
+            <div key={item.id} className={`shop-product-card inventory-item ${isActive ? 'active-pet' : ''}`}>
+              <div className="product-category-tag">{isActive ? 'Đang sử dụng' : 'Thú cưng'}</div>
+              
+              <div className="product-image-area">
                 {item.imageUrl ? (
-                  <img src={item.imageUrl} alt={item.name} />
+                  <img className="product-image" src={item.imageUrl} alt={item.name} />
                 ) : (
-                  <span>🐾</span>
+                  <div className="product-image">🐾</div>
                 )}
               </div>
-              <h4 className="item-name">{item.name}</h4>
-              <p className="item-count">{item.description}</p>
-              <button className="use-item-btn" onClick={() => handleUsePet(item)} disabled={isActive}>
-                {isActive ? 'Đang dùng' : 'Dùng'}
-              </button>
+
+              <div className="product-info">
+                <h3 className="product-name">{item.name}</h3>
+                <p className="product-description">{item.description}</p>
+              </div>
+
+              <div className="product-footer">
+                <button 
+                  className="buy-product-btn use-item-btn" 
+                  onClick={() => handleUsePet(item)} 
+                  disabled={isActive}
+                  style={{ width: '100%', background: isActive ? '#10b981' : '#2f63b7' }}
+                >
+                  {isActive ? 'Đang dùng ✓' : 'Dùng ngay'}
+                </button>
+              </div>
             </div>
           )
         })}
 
         {!loading && filtered.length === 0 && (
-          <div className="empty-state">
+          <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
             <p>{selectedCategory === 'active' ? 'Bé chưa chọn vật phẩm đang dùng.' : 'Bé chưa có vật phẩm nào.'}</p>
             <p className="empty-text">Ba mẹ có thể vào Cửa hàng sao để đổi pet cho bé.</p>
           </div>
