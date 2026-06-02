@@ -154,22 +154,52 @@ function dayKey(isoDate: string): string {
 }
 
 function formatDuration(seconds: number | null): string {
-  if (seconds === null) return "duration not recorded";
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds === null) return "chưa ghi nhận thời lượng";
+  if (seconds < 60) return `${seconds} giây`;
   const minutes = Math.floor(seconds / 60);
   const remainder = seconds % 60;
-  return remainder === 0 ? `${minutes}m` : `${minutes}m ${remainder}s`;
+  return remainder === 0 ? `${minutes} phút` : `${minutes} phút ${remainder} giây`;
 }
 
 function toDisplayEmotion(value: string): string {
-  return value.trim().toLowerCase();
+  const key = value.trim().toLowerCase();
+  const labels: Record<string, string> = {
+    happy: "Vui vẻ",
+    joy: "Vui vẻ",
+    calm: "Bình tĩnh",
+    sad: "Buồn",
+    angry: "Tức giận",
+    scared: "Lo lắng",
+    surprised: "Ngạc nhiên",
+  };
+  return labels[key] ?? key;
+}
+
+function toDisplayStatus(value: string): string {
+  const key = value.trim().toUpperCase();
+  const labels: Record<string, string> = {
+    COMPLETED: "hoàn thành",
+    ABANDONED: "bỏ dở",
+    IN_PROGRESS: "đang làm",
+  };
+  return labels[key] ?? value.toLowerCase();
+}
+
+function toDisplayContentType(value: string): string {
+  const key = value.trim().toUpperCase();
+  const labels: Record<string, string> = {
+    LESSON: "Bài học",
+    QUIZ: "Câu hỏi",
+    GAME: "Trò chơi",
+  };
+  return labels[key] ?? value;
 }
 
 function formatCounts(counts: Map<string, number>): string {
   const parts = Array.from(counts.entries())
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([label, count]) => `${label}: ${count}`);
-  return parts.length > 0 ? parts.join(", ") : "none recorded";
+  return parts.length > 0 ? parts.join(", ") : "không có dữ liệu";
 }
 
 function addLine(lines: PdfLine[], text: string, fontSize = 10, gapAfter = 0): void {
@@ -295,22 +325,22 @@ function buildReportLines(input: {
   const dailyRows = summarizeDailyRows(input.sessionRows, input.emotionRows, input.alertRows);
   const lines: PdfLine[] = [];
 
-  addLine(lines, "HMI Child Activity Report", 18, 10);
-  addLine(lines, `Child: ${input.childNickname} (birth year ${input.childBirthYear})`, 11);
-  addLine(lines, `Period: ${formatDate(input.range.from)} - ${formatDate(input.range.to)}`, 11);
-  addLine(lines, `Generated at: ${new Date().toISOString()}`, 9, 12);
+  addLine(lines, "Báo cáo hoạt động của trẻ", 18, 10);
+  addLine(lines, `Bé: ${input.childNickname} (năm sinh ${input.childBirthYear})`, 11);
+  addLine(lines, `Thời gian: ${formatDate(input.range.from)} - ${formatDate(input.range.to)}`, 11);
+  addLine(lines, `Tạo lúc: ${new Date().toISOString()}`, 9, 12);
 
-  addLine(lines, "Summary", 14, 4);
+  addLine(lines, "Tổng quan", 14, 4);
   addLine(
     lines,
-    `Activities: ${input.sessionRows.length} total, ${completedCount} completed, ${quitCount} quit, ${totalStars} stars earned.`,
+    `Hoạt động: ${input.sessionRows.length} tổng cộng, ${completedCount} hoàn thành, ${quitCount} bỏ dở, nhận ${totalStars} sao.`,
   );
-  addLine(lines, `Emotion summary: ${formatCounts(emotionCounts)}.`);
-  addLine(lines, `Chatbot warning alerts: ${input.alertRows.length}.`, 10, 12);
+  addLine(lines, `Cảm xúc: ${formatCounts(emotionCounts)}.`);
+  addLine(lines, `Cảnh báo chatbot: ${input.alertRows.length}.`, 10, 12);
 
-  addLine(lines, "Daily Activity", 14, 4);
+  addLine(lines, "Hoạt động theo ngày", 14, 4);
   if (dailyRows.length === 0) {
-    addLine(lines, "No activity, emotion, or chatbot warning data was recorded in this period.");
+    addLine(lines, "Chưa có hoạt động, cảm xúc hoặc cảnh báo chatbot trong khoảng thời gian này.");
     return lines;
   }
 
@@ -320,28 +350,28 @@ function buildReportLines(input: {
     addLine(lines, day.dateLabel, 12, 2);
     addLine(
       lines,
-      `Activities: ${day.sessions.length} total, ${dayCompleted} completed, ${dayQuit} quit.`,
+      `Hoạt động: ${day.sessions.length} tổng cộng, ${dayCompleted} hoàn thành, ${dayQuit} bỏ dở.`,
     );
 
     for (const session of day.sessions) {
       const quizResult =
-        session.isCorrect === null ? "" : session.isCorrect ? ", quiz correct" : ", quiz incorrect";
+        session.isCorrect === null ? "" : session.isCorrect ? ", trả lời đúng" : ", trả lời sai";
       const selectedEmotion = session.selectedEmotion
-        ? `, selected ${session.selectedEmotion}`
+        ? `, bé chọn ${toDisplayEmotion(session.selectedEmotion)}`
         : "";
       const aiEmotion = session.aiDetectedEmotion
-        ? `, AI detected ${session.aiDetectedEmotion}`
+        ? `, AI nhận diện ${toDisplayEmotion(session.aiDetectedEmotion)}`
         : "";
       addLine(
         lines,
-        `- ${session.contentTitle} (${session.contentType}): ${session.status.toLowerCase()}, ${formatDuration(session.durationSeconds)}, +${session.starsEarned} stars${quizResult}${selectedEmotion}${aiEmotion}.`,
+        `- ${session.contentTitle} (${toDisplayContentType(session.contentType)}): ${toDisplayStatus(session.status)}, ${formatDuration(session.durationSeconds)}, +${session.starsEarned} sao${quizResult}${selectedEmotion}${aiEmotion}.`,
       );
     }
 
-    addLine(lines, `Emotions expressed: ${formatCounts(day.emotionCounts)}.`);
+    addLine(lines, `Cảm xúc ghi nhận: ${formatCounts(day.emotionCounts)}.`);
 
     if (day.alerts.length > 0) {
-      addLine(lines, `Chatbot warnings: ${day.alerts.length}.`);
+      addLine(lines, `Cảnh báo chatbot: ${day.alerts.length}.`);
       for (const alert of day.alerts) {
         addLine(lines, `- ${alert.reason} (${alert.notificationStatus.toLowerCase()}).`);
       }

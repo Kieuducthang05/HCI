@@ -138,7 +138,7 @@ export default function ChildHome() {
           {greeting}
         </h1>
 
-        {/* Lưới 4 nút được map thẳng sự kiện chuyển hướng */}
+        {/* Lưới nút được map thẳng sự kiện chuyển hướng */}
         <div 
           style={{ 
             display: 'grid', 

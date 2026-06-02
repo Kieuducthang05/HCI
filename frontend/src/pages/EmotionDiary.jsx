@@ -3,16 +3,108 @@ import { childrenApi, trackingApi } from '../services/api'
 import '../styles/EmotionDiary.css'
 
 const emotionMeta = {
-  happy: { label: 'Hạnh phúc', emoji: '😊', group: 'Tích cực', color: '#90CAF9' },
-  calm: { label: 'Bình tĩnh', emoji: '😌', group: 'Tích cực', color: '#90CAF9' },
+  happy: { label: 'Vui vẻ', emoji: '😊', group: 'Tích cực', color: '#90CAF9' },
+  calm: { label: 'Bình tĩnh', emoji: '😌', group: 'Tích cực', color: '#A7E3D1' },
+  neutral: { label: 'Trung lập', emoji: '🙂', group: 'Trung lập', color: '#C8C1B6' },
   sad: { label: 'Buồn', emoji: '😢', group: 'Tiêu cực', color: '#EF9A9A' },
   angry: { label: 'Tức giận', emoji: '😠', group: 'Tiêu cực', color: '#FFB74D' },
-  scared: { label: 'Lo lắng', emoji: '😟', group: 'Tiêu cực', color: '#EF9A9A' },
+  scared: { label: 'Lo lắng', emoji: '😟', group: 'Tiêu cực', color: '#D8B4FE' },
+  stressed: { label: 'Căng thẳng', emoji: '😣', group: 'Tiêu cực', color: '#FCA5A5' },
+  surprised: { label: 'Ngạc nhiên', emoji: '😮', group: 'Trung lập', color: '#FDE68A' },
+  unknown: { label: 'Không xác định', emoji: '🙂', group: 'Trung lập', color: '#A1887F' },
 }
+
+const emotionAliases = {
+  HAPPY: 'happy',
+  JOY: 'happy',
+  CALM: 'calm',
+  NEUTRAL: 'neutral',
+  SAD: 'sad',
+  ANGRY: 'angry',
+  FEAR: 'scared',
+  SCARED: 'scared',
+  STRESSED: 'stressed',
+  SURPRISED: 'surprised',
+}
+
+const triggerSourceLabels = {
+  AAC_BOARD: 'Bảng giao tiếp',
+  GAME: 'Trò chơi',
+  QUIZ: 'Câu hỏi',
+  LECTURE: 'Bài học',
+  WEBCAM: 'Camera',
+  SYSTEM: 'Hệ thống',
+}
+
+const LOG_DISPLAY_LIMIT = 8
+const LOG_PAGE_LIMIT = 100
+const MAX_LOG_PAGES = 20
+const WEEKDAY_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
 
 function formatTime(value) {
   if (!value) return ''
   return new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+}
+
+function dateKey(value) {
+  const month = `${value.getMonth() + 1}`.padStart(2, '0')
+  const day = `${value.getDate()}`.padStart(2, '0')
+  return `${value.getFullYear()}-${month}-${day}`
+}
+
+function buildRecentWeek() {
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date()
+    date.setHours(0, 0, 0, 0)
+    date.setDate(date.getDate() - 6 + index)
+
+    return {
+      key: dateKey(date),
+      label: WEEKDAY_LABELS[date.getDay()],
+      count: 0,
+    }
+  })
+}
+
+function normalizeEmotionKey(value) {
+  const rawValue = String(value || '').trim()
+  if (!rawValue) return 'unknown'
+
+  const upperValue = rawValue.toUpperCase()
+  const lowerValue = rawValue.toLowerCase()
+  return emotionAliases[upperValue] || emotionAliases[lowerValue.toUpperCase()] || lowerValue
+}
+
+function getLogEmotionKey(log) {
+  return normalizeEmotionKey(log.emotion_value || log.ai_emotion_label)
+}
+
+function getEmotionMeta(key) {
+  return emotionMeta[key] || emotionMeta.unknown
+}
+
+function formatTriggerSource(value) {
+  const key = String(value || '').trim().toUpperCase()
+  return triggerSourceLabels[key] || value || 'Ghi nhận cảm xúc'
+}
+
+async function fetchAllEmotionLogs(childId) {
+  const logs = []
+  let cursor
+
+  for (let page = 0; page < MAX_LOG_PAGES; page += 1) {
+    const result = await trackingApi.listEmotionLogs(childId, {
+      limit: LOG_PAGE_LIMIT,
+      cursor,
+    })
+
+    logs.push(...(result.logs || []))
+    cursor = result.next_cursor
+
+    if (!cursor) break
+  }
+
+  return logs
 }
 
 export default function EmotionDiary() {
@@ -21,6 +113,7 @@ export default function EmotionDiary() {
   const [emotionLogs, setEmotionLogs] = useState([])
   const [error, setError] = useState('')
   const [exporting, setExporting] = useState(false)
+  const [showAllLogs, setShowAllLogs] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -44,9 +137,12 @@ export default function EmotionDiary() {
     if (!childId) return
 
     let mounted = true
-    trackingApi.listEmotionLogs(childId, { limit: 50 })
-      .then((result) => {
-        if (mounted) setEmotionLogs(result.logs || [])
+    fetchAllEmotionLogs(childId)
+      .then((logs) => {
+        if (mounted) {
+          setEmotionLogs(logs)
+          setError('')
+        }
       })
       .catch((err) => {
         if (mounted) setError(err.message || 'Không tải được nhật ký cảm xúc.')
@@ -57,26 +153,46 @@ export default function EmotionDiary() {
     }
   }, [childId])
 
+  const weeklyTrend = useMemo(() => {
+    const week = buildRecentWeek()
+    const weekMap = new Map(week.map((day) => [day.key, day]))
+
+    emotionLogs.forEach((log) => {
+      if (!log.created_at) return
+      const createdAt = new Date(log.created_at)
+      if (Number.isNaN(createdAt.getTime())) return
+      const day = weekMap.get(dateKey(createdAt))
+      if (day) day.count += 1
+    })
+
+    return week
+  }, [emotionLogs])
+
   const emotionStats = useMemo(() => {
     const counts = emotionLogs.reduce((acc, log) => {
-      const key = log.emotion_value || log.ai_emotion_label || 'unknown'
+      const key = getLogEmotionKey(log)
       acc[key] = (acc[key] || 0) + 1
       return acc
     }, {})
 
-    return Object.entries(counts).map(([key, value], index) => ({
-      id: key,
-      label: emotionMeta[key]?.label || key,
-      value,
-      change: index === 0 ? 'Nhiều nhất gần đây' : 'Đã ghi nhận',
-      color: emotionMeta[key]?.color || '#A1887F',
-    }))
+    return Object.entries(counts)
+      .sort(([, left], [, right]) => right - left)
+      .map(([key, value], index) => {
+        const meta = getEmotionMeta(key)
+        return {
+          id: key,
+          label: meta.label,
+          value,
+          change: index === 0 ? 'Nhiều nhất của bé này' : 'Đã ghi nhận',
+          color: meta.color,
+        }
+      })
   }, [emotionLogs])
 
   const emotionBreakdown = useMemo(() => {
     const groups = emotionLogs.reduce((acc, log) => {
-      const key = log.emotion_value || log.ai_emotion_label || 'unknown'
-      const group = emotionMeta[key]?.group || 'Trung lập'
+      const key = getLogEmotionKey(log)
+      const group = getEmotionMeta(key).group
       acc[group] = (acc[group] || 0) + 1
       return acc
     }, {})
@@ -84,9 +200,18 @@ export default function EmotionDiary() {
     return [
       { type: 'Tích cực', count: groups['Tích cực'] || 0, color: '#90CAF9' },
       { type: 'Tiêu cực', count: groups['Tiêu cực'] || 0, color: '#EF9A9A' },
-      { type: 'Trung lập', count: groups['Trung lập'] || 0, color: '#A1887F' },
+      { type: 'Trung lập', count: groups['Trung lập'] || 0, color: '#C8C1B6' },
     ]
   }, [emotionLogs])
+
+  const maxTrendCount = Math.max(...weeklyTrend.map((day) => day.count), 1)
+  const trendPoints = weeklyTrend.map((day, index) => ({
+    ...day,
+    x: 44 + index * (340 / 6),
+    y: 164 - (day.count / maxTrendCount) * 128,
+  }))
+  const maxBreakdownCount = Math.max(...emotionBreakdown.map((item) => item.count), 1)
+  const visibleEmotionLogs = showAllLogs ? emotionLogs : emotionLogs.slice(0, LOG_DISPLAY_LIMIT)
 
   const handleExportPdf = async () => {
     if (!childId) return
@@ -101,7 +226,8 @@ export default function EmotionDiary() {
       link.click()
       URL.revokeObjectURL(url)
     } catch (err) {
-      setError(err.message || 'Không xuất được PDF.')
+      console.error('Could not export emotion report PDF:', err)
+      setError('Không xuất được báo cáo PDF. Vui lòng kiểm tra kết nối và thử lại.')
     } finally {
       setExporting(false)
     }
@@ -116,7 +242,15 @@ export default function EmotionDiary() {
           {error && <span className="error-message">{error}</span>}
         </div>
         <div className="emotion-header-actions">
-          <select className="text-input" value={childId} onChange={(e) => setChildId(e.target.value)}>
+          <select
+            className="text-input"
+            value={childId}
+            onChange={(e) => {
+              setChildId(e.target.value)
+              setEmotionLogs([])
+              setShowAllLogs(false)
+            }}
+          >
             {children.map((child) => (
               <option key={child.id} value={child.id}>Bé {child.nickname}</option>
             ))}
@@ -147,34 +281,66 @@ export default function EmotionDiary() {
       <div className="emotion-charts-row">
         <div className="emotion-chart-box">
           <h3 className="chart-box-title">Xu hướng cảm xúc theo tuần</h3>
+          <p className="chart-box-subtitle">Số lần bé ghi nhận cảm xúc trong 7 ngày gần nhất.</p>
           <div className="line-chart-container">
-            <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet" className="line-chart-svg">
-              <line x1="0" y1="40" x2="400" y2="40" stroke="#e0e0e0" strokeWidth="1" />
-              <line x1="0" y1="80" x2="400" y2="80" stroke="#e0e0e0" strokeWidth="1" />
-              <line x1="0" y1="120" x2="400" y2="120" stroke="#e0e0e0" strokeWidth="1" />
-              <line x1="0" y1="160" x2="400" y2="160" stroke="#e0e0e0" strokeWidth="1" />
+            <svg
+              viewBox="0 0 420 230"
+              preserveAspectRatio="xMidYMid meet"
+              className="line-chart-svg"
+              role="img"
+              aria-label="Biểu đồ đường thể hiện số lượt ghi nhận cảm xúc theo ngày trong 7 ngày gần nhất"
+            >
+              <text x="44" y="16" className="chart-axis-title">Lượt ghi nhận</text>
+              {[0, 0.5, 1].map((ratio) => {
+                const y = 164 - ratio * 128
+                return (
+                  <g key={ratio}>
+                    <line x1="44" y1={y} x2="384" y2={y} className="chart-grid-line" />
+                    <text x="34" y={y + 4} className="chart-tick-label">{Math.round(maxTrendCount * ratio)}</text>
+                  </g>
+                )
+              })}
+              <line x1="44" y1="164" x2="384" y2="164" className="chart-axis-line" />
               <polyline
                 fill="none"
                 stroke="#64B5F6"
                 strokeWidth="3"
-                points={emotionLogs.slice(0, 7).map((_, index) => `${20 + index * 50},${150 - Math.min(100, (index + 1) * 12)}`).join(' ') || '20,150 70,150'}
+                points={trendPoints.map((point) => `${point.x},${point.y}`).join(' ')}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-              {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, index) => (
-                <text key={day} x={20 + index * 50} y="195" fontSize="12" textAnchor="middle" fill="#999">{day}</text>
+              {trendPoints.map((point) => (
+                <g key={point.key}>
+                  <circle cx={point.x} cy={point.y} r="4.5" className="trend-point" />
+                  <text x={point.x} y={point.y - 10} className="trend-point-label">{point.count}</text>
+                </g>
               ))}
+              {trendPoints.map((point) => (
+                <text key={`label-${point.key}`} x={point.x} y="194" className="chart-day-label">{point.label}</text>
+              ))}
+              <text x="210" y="222" className="chart-axis-title chart-axis-bottom">Ngày trong tuần</text>
             </svg>
+          </div>
+          <div className="chart-caption">
+            <span className="trend-swatch"></span>
+            Mỗi điểm là số lần cảm xúc được ghi nhận trong ngày.
           </div>
         </div>
 
         <div className="emotion-chart-box">
           <h3 className="chart-box-title">Tổng quan cảm xúc</h3>
+          <p className="chart-box-subtitle">Tổng số lượt ghi nhận theo từng nhóm cảm xúc.</p>
           <div className="bar-chart-container">
             <div className="bars-grid">
               {emotionBreakdown.map((item) => (
                 <div key={item.type} className="bar-column">
-                  <div className="bar" style={{ height: `${Math.max(8, item.count * 12)}px`, backgroundColor: item.color }}></div>
+                  <div
+                    className="bar"
+                    style={{
+                      height: `${item.count === 0 ? 0 : Math.max(10, Math.round((item.count / maxBreakdownCount) * 150))}px`,
+                      backgroundColor: item.color,
+                    }}
+                  ></div>
                   <div className="bar-count">{item.count}</div>
                 </div>
               ))}
@@ -189,7 +355,14 @@ export default function EmotionDiary() {
       </div>
 
       <div className="emotion-logs-section">
-        <h3 className="logs-title">Nhật ký gần đây</h3>
+        <div className="logs-header">
+          <h3 className="logs-title">Nhật ký gần đây</h3>
+          {emotionLogs.length > 0 && (
+            <span className="logs-count">
+              Hiển thị {visibleEmotionLogs.length}/{emotionLogs.length}
+            </span>
+          )}
+        </div>
         <div className="emotion-logs-list">
           {emotionLogs.length === 0 && (
             <div className="emotion-log-item">
@@ -200,21 +373,26 @@ export default function EmotionDiary() {
               </div>
             </div>
           )}
-          {emotionLogs.map((log) => {
-            const key = log.emotion_value || log.ai_emotion_label || 'unknown'
-            const meta = emotionMeta[key] || { label: key, emoji: '🙂' }
+          {visibleEmotionLogs.map((log) => {
+            const key = getLogEmotionKey(log)
+            const meta = getEmotionMeta(key)
             return (
               <div key={log.id} className="emotion-log-item">
                 <div className="log-emoji">{meta.emoji}</div>
                 <div className="log-details">
                   <div className="log-emotion-name">{meta.label}</div>
-                  <div className="log-description">{log.trigger_source || 'Ghi nhận cảm xúc'}</div>
+                  <div className="log-description">{formatTriggerSource(log.trigger_source)}</div>
                 </div>
                 <div className="log-time">{formatTime(log.created_at)}</div>
               </div>
             )
           })}
         </div>
+        {emotionLogs.length > LOG_DISPLAY_LIMIT && (
+          <button className="logs-toggle-btn" onClick={() => setShowAllLogs((value) => !value)}>
+            {showAllLogs ? 'Thu gọn nhật ký' : `Xem thêm ${emotionLogs.length - LOG_DISPLAY_LIMIT} mục`}
+          </button>
+        )}
       </div>
     </div>
   )

@@ -14,8 +14,11 @@ const MAX_TEXT_CHARS = 92;
 
 function sanitizeText(value: string): string {
   return value
-    .normalize("NFKD")
-    .replace(/[^\x20-\x7e]/g, "?")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7e]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }

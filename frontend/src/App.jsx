@@ -18,6 +18,7 @@ import ChildChat from './pages/ChildChat'
 import ChildEmotion from './pages/ChildEmotion'
 import ChildAvatar from './pages/ChildAvatar'
 import ChildInventory from './pages/ChildInventory'
+import ChildCalmCorner from './pages/ChildCalmCorner'
 import AdminDashboard from './pages/AdminDashboard'
 import './App.css'
 
@@ -49,6 +50,7 @@ function App() {
           <Route path="games" element={<ChildGames />} />
           <Route path="chat" element={<ChildChat />} />
           <Route path="emotion" element={<ChildEmotion />} />
+          <Route path="calm-corner" element={<ChildCalmCorner />} />
           <Route path="friends" element={<ChildFriends />} />
           <Route path="avatar" element={<ChildAvatar />} />
           <Route path="inventory" element={<ChildInventory />} />

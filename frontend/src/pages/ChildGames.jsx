@@ -485,7 +485,7 @@ export default function ChildGames() {
       .then((result) => {
         const contents = result.contents || []
         setGameContents(contents)
-        setContentError(contents.length ? '' : 'Backend chưa có nội dung GAME để cộng sao.')
+        setContentError(contents.length ? '' : '')
       })
       .catch((error) => {
         setContentError(error.message || 'Không tải được nội dung game từ backend.')
@@ -850,7 +850,7 @@ export default function ChildGames() {
   return (
     <ExpressionGame
       data={currentGameData}
-      score={score}
+      score={displayStars}
       currentIndex={gameIndex}
       total={activeGameList.length}
       selectedChild={selectedChild}

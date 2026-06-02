@@ -2013,6 +2013,18 @@ body.dark-mode {
     box-shadow: 0 18px 42px rgba(15, 23, 42, 0.1);
 }
 
+.child-page-games .expression-game-shell {
+  min-height: calc(100vh - 32px);
+  margin-bottom: 0;
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 4% 58%, rgba(255, 222, 129, 0.28), transparent 24%),
+    radial-gradient(circle at 90% 12%, rgba(235, 245, 255, 0.9), transparent 24%),
+    linear-gradient(180deg, #fffdf8 0%, #f7f2ea 100%);
+  box-shadow: 0 22px 52px rgba(31, 35, 73, 0.26);
+}
+
 .expression-game-topbar {
     display: flex;
     align-items: center;
@@ -2391,6 +2403,18 @@ body.dark-mode {
 }
 
 /* ===== GAME 1 / GAME 2 FIGMA-STYLE SCREENS ===== */
+.child-page-games {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.child-page-games .child-main-content {
+  padding: 16px;
+  background:
+    radial-gradient(circle at 10% 12%, rgba(255, 240, 191, 0.28), transparent 30%),
+    radial-gradient(circle at 88% 18%, rgba(80, 227, 194, 0.16), transparent 28%),
+    linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
 .child-container-plain .child-games-menu {
     min-height: 100vh;
     padding: 24px 16px;

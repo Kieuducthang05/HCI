@@ -7,6 +7,12 @@ export type PreferenceSettingsResponse = {
   music_volume?: number;
   high_contrast_enabled?: boolean;
   reduced_motion_enabled?: boolean;
+  regulation?: {
+    method?: "breathing" | "quiet" | "music" | "parent";
+    contact?: string;
+    alertAfter?: "60" | "120";
+    quietMode?: boolean;
+  };
 };
 
 const allowedPreferenceKeys = new Set([
@@ -15,7 +21,12 @@ const allowedPreferenceKeys = new Set([
   "music_volume",
   "high_contrast_enabled",
   "reduced_motion_enabled",
+  "regulation",
 ]);
+
+const allowedRegulationKeys = new Set(["method", "contact", "alertAfter", "alert_after", "quietMode", "quiet_mode"]);
+const allowedRegulationMethods = new Set(["breathing", "quiet", "music", "parent"]);
+const allowedRegulationAlertAfter = new Set(["60", "120"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -97,6 +108,76 @@ function normalizeBoolean<T extends string>(
   return value;
 }
 
+function normalizeOptionalString<T extends string>(
+  value: unknown,
+  errorType: T,
+  fieldName: string,
+  maxLength: number,
+): string {
+  if (typeof value !== "string") {
+    throwInvalid(errorType, `${fieldName} must be a string.`);
+  }
+
+  const normalizedValue = value.trim().replace(/\s+/g, " ");
+  if (!normalizedValue || normalizedValue.length > maxLength || /[\u0000-\u001f\u007f]/.test(normalizedValue)) {
+    throwInvalid(
+      errorType,
+      `${fieldName} must be a non-empty string of ${maxLength} characters or fewer.`,
+    );
+  }
+
+  return normalizedValue;
+}
+
+function normalizeRegulationSettings<T extends string>(
+  input: unknown,
+  errorType: T,
+): NonNullable<PreferencesMetadata["regulation"]> {
+  if (!isRecord(input)) {
+    throwInvalid(errorType, "regulation must be an object.");
+  }
+
+  for (const key of Object.keys(input)) {
+    if (!allowedRegulationKeys.has(key)) {
+      throwInvalid(errorType, `Unsupported regulation preference key: ${key}.`);
+    }
+  }
+
+  const regulation: NonNullable<PreferencesMetadata["regulation"]> = {};
+
+  if ("method" in input && input.method !== undefined) {
+    if (typeof input.method !== "string" || !allowedRegulationMethods.has(input.method)) {
+      throwInvalid(errorType, "regulation.method must be breathing, quiet, music, or parent.");
+    }
+    regulation.method = input.method as NonNullable<PreferencesMetadata["regulation"]>["method"];
+  }
+
+  if ("contact" in input && input.contact !== undefined) {
+    regulation.contact = normalizeOptionalString(input.contact, errorType, "regulation.contact", 80);
+  }
+
+  const alertAfter = getStoredValue(input, "alertAfter", "alert_after");
+  if (alertAfter !== undefined) {
+    const normalizedAlertAfter = typeof alertAfter === "number" ? String(alertAfter) : alertAfter;
+    if (
+      typeof normalizedAlertAfter !== "string" ||
+      !allowedRegulationAlertAfter.has(normalizedAlertAfter)
+    ) {
+      throwInvalid(errorType, "regulation.alertAfter must be 60 or 120.");
+    }
+    regulation.alertAfter = normalizedAlertAfter as NonNullable<
+      PreferencesMetadata["regulation"]
+    >["alertAfter"];
+  }
+
+  const quietMode = getStoredValue(input, "quietMode", "quiet_mode");
+  if (quietMode !== undefined) {
+    regulation.quietMode = normalizeBoolean(quietMode, errorType, "regulation.quietMode");
+  }
+
+  return regulation;
+}
+
 export function normalizePreferenceSettingsInput<T extends string>(
   input: unknown,
   errorType: T,
@@ -147,6 +228,10 @@ export function normalizePreferenceSettingsInput<T extends string>(
     );
   }
 
+  if ("regulation" in input && input.regulation !== undefined) {
+    settings.regulation = normalizeRegulationSettings(input.regulation, errorType);
+  }
+
   return settings;
 }
 
@@ -169,6 +254,40 @@ function readIntegerRange(value: unknown, min: number, max: number): number | un
 
 function readBoolean(value: unknown): boolean | undefined {
   return typeof value === "boolean" ? value : undefined;
+}
+
+function readRegulationSettings(
+  value: unknown,
+): NonNullable<PreferencesMetadata["regulation"]> | undefined {
+  if (!isRecord(value)) return undefined;
+
+  const regulation: NonNullable<PreferencesMetadata["regulation"]> = {};
+  const method = getStoredValue(value, "method", "method");
+  const contact = getStoredValue(value, "contact", "contact");
+  const alertAfter = getStoredValue(value, "alertAfter", "alert_after");
+  const quietMode = getStoredValue(value, "quietMode", "quiet_mode");
+
+  if (typeof method === "string" && allowedRegulationMethods.has(method)) {
+    regulation.method = method as NonNullable<PreferencesMetadata["regulation"]>["method"];
+  }
+
+  const normalizedContact = readString(contact, 80);
+  if (normalizedContact !== undefined) regulation.contact = normalizedContact;
+
+  const normalizedAlertAfter = typeof alertAfter === "number" ? String(alertAfter) : alertAfter;
+  if (
+    typeof normalizedAlertAfter === "string" &&
+    allowedRegulationAlertAfter.has(normalizedAlertAfter)
+  ) {
+    regulation.alertAfter = normalizedAlertAfter as NonNullable<
+      PreferencesMetadata["regulation"]
+    >["alertAfter"];
+  }
+
+  const normalizedQuietMode = readBoolean(quietMode);
+  if (normalizedQuietMode !== undefined) regulation.quietMode = normalizedQuietMode;
+
+  return Object.keys(regulation).length > 0 ? regulation : undefined;
 }
 
 function getStoredValue(
@@ -199,6 +318,7 @@ export function toPreferenceSettingsMetadata(
   const reducedMotionEnabled = readBoolean(
     getStoredValue(settings, "reducedMotionEnabled", "reduced_motion_enabled"),
   );
+  const regulation = readRegulationSettings(getStoredValue(settings, "regulation", "regulation"));
 
   if (theme !== undefined) metadata.theme = theme;
   if (musicTrackId === null) {
@@ -210,6 +330,7 @@ export function toPreferenceSettingsMetadata(
   if (musicVolume !== undefined) metadata.musicVolume = musicVolume;
   if (highContrastEnabled !== undefined) metadata.highContrastEnabled = highContrastEnabled;
   if (reducedMotionEnabled !== undefined) metadata.reducedMotionEnabled = reducedMotionEnabled;
+  if (regulation !== undefined) metadata.regulation = regulation;
 
   return metadata;
 }
@@ -233,6 +354,7 @@ export function toPreferenceSettingsResponse(
   if (metadata.reducedMotionEnabled !== undefined) {
     response.reduced_motion_enabled = metadata.reducedMotionEnabled;
   }
+  if (metadata.regulation !== undefined) response.regulation = metadata.regulation;
 
   return response;
 }

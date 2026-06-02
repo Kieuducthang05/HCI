@@ -164,7 +164,10 @@ export default function ParentShop() {
 
         <div className="shop-stars-display">
           <span className="stars-label">Hiện có:</span>
-          <span className="stars-amount">{userStars.toLocaleString()} <span className="stars-icon">⭐</span></span>
+          <span className="stars-amount">
+            <span className="stars-icon" aria-hidden="true">★</span>
+            <span>{userStars.toLocaleString()}</span>
+          </span>
           <select className="text-input" value={childId} onChange={handleSelectChild}>
             {children.map((child) => (
               <option key={child.id} value={child.id}>Bé {child.nickname}</option>
@@ -204,7 +207,10 @@ export default function ParentShop() {
                 <p className="product-description">{item.description}</p>
               </div>
               <div className="product-footer">
-                <div className="product-price">{item.price} <span className="price-star">⭐</span></div>
+                <div className="product-price">
+                  <span className="price-star" aria-hidden="true">★</span>
+                  <span>{item.price}</span>
+                </div>
                 <button className="buy-product-btn" onClick={() => handleBuyItem(item)} disabled={owned || userStars < item.price}>
                   {owned ? 'Đã có' : 'Mua'}
                 </button>

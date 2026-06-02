@@ -491,7 +491,6 @@ export default function ParentSettings() {
           <div className="info-field">
             <label>Cảnh báo sau</label>
             <select name="alertAfter" value={regulationConfig.alertAfter} onChange={handleRegulationChange} className="text-input">
-              <option value="30">30 giây tiêu cực kéo dài</option>
               <option value="60">1 phút tiêu cực kéo dài</option>
               <option value="120">2 phút tiêu cực kéo dài</option>
             </select>

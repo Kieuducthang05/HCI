@@ -255,7 +255,7 @@
   overflow-x: auto;
   flex-wrap: wrap;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.5);
+  background: linear-gradient(135deg, #FCEEF0 0%, #FFFAEA 100%);
 }
 
 .quick-reply-btn {
@@ -280,12 +280,12 @@
   display: flex;
   gap: 12px;
   padding: 16px 20px;
-  background: white;
+  background: linear-gradient(135deg, #FCEEF0 0%, #FFFAEA 100%);
   box-sizing: border-box;
-  max-width: 600px;
+  max-width: none;
   margin: 0 auto;
   width: 100%;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid rgba(209, 150, 157, 0.16);
 }
 
 .chat-input {
@@ -297,6 +297,7 @@
   font-family: inherit;
   resize: none;
   max-height: 100px;
+  background: rgba(255, 255, 255, 0.86);
   transition: border-color 0.2s ease;
 }
 

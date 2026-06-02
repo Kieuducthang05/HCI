@@ -156,7 +156,7 @@ function ContentMedia({ media, fallback = '❓', title = 'media câu hỏi' }) {
   )
 }
 
-function QuizContent({ content, onAnswer }) {
+function QuizContent({ content, onAnswer, onSpeakQuestion, isSpeaking }) {
   const quiz = content.quiz || {}
   const answers = quiz.answer_emotions || []
   const question = quiz.description || content.title
@@ -171,6 +171,15 @@ function QuizContent({ content, onAnswer }) {
 
       <div className="quiz-section">
         <h3 className="quiz-question">{question}</h3>
+        <button
+          className={`question-speak-btn ${isSpeaking ? 'active' : ''}`}
+          onClick={() => onSpeakQuestion(question)}
+          type="button"
+          aria-pressed={isSpeaking}
+        >
+          <span aria-hidden="true">{isSpeaking ? '■' : '🔊'}</span>
+          {isSpeaking ? 'Dừng đọc' : 'Nghe câu hỏi'}
+        </button>
         <div className="quiz-options">
           {answers.map((answer) => {
             const info = emotionInfo(answer)
@@ -201,6 +210,7 @@ export default function ChildQuestions() {
   const [lastOutcome, setLastOutcome] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [speakingQuestionId, setSpeakingQuestionId] = useState(null)
 
   const current = questions[currentIndex]
   useEffect(() => {
@@ -224,6 +234,21 @@ export default function ChildQuestions() {
       mounted = false
     }
   }, [selectedChild?.id])
+
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis?.cancel()
+    }
+  }, [])
+
+  useEffect(() => {
+    window.speechSynthesis?.cancel()
+  }, [currentIndex])
+
+  const stopQuestionSpeech = () => {
+    window.speechSynthesis?.cancel()
+    setSpeakingQuestionId(null)
+  }
 
   const updateStars = (totalStars) => {
     if (typeof totalStars !== 'number') return
@@ -295,6 +320,7 @@ export default function ChildQuestions() {
 
   const handleAnswer = async (selectedEmotion) => {
     if (!current || showResult) return
+    stopQuestionSpeech()
 
     const correctEmotion = normalizeEmotion(current.quiz?.correct_emotion)
     const selected = normalizeEmotion(selectedEmotion)
@@ -315,7 +341,34 @@ export default function ChildQuestions() {
     setShowResult(isCorrect ? 'correct' : 'incorrect')
   }
 
+  const handleSpeakQuestion = (questionText) => {
+    if (!window.speechSynthesis) {
+      setError('Trình duyệt hiện tại chưa hỗ trợ đọc câu hỏi.')
+      return
+    }
+
+    const speechId = current?.id ?? currentIndex
+
+    if (speakingQuestionId === speechId) {
+      window.speechSynthesis.cancel()
+      setSpeakingQuestionId(null)
+      return
+    }
+
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(`Câu hỏi. ${questionText}. Con hãy chọn đáp án đúng nhé.`)
+    utterance.lang = 'vi-VN'
+    utterance.rate = 0.82
+    utterance.pitch = 1
+    utterance.volume = 0.9
+    utterance.onend = () => setSpeakingQuestionId(null)
+    utterance.onerror = () => setSpeakingQuestionId(null)
+    setSpeakingQuestionId(speechId)
+    window.speechSynthesis.speak(utterance)
+  }
+
   const handleContinueResult = () => {
+    stopQuestionSpeech()
     setShowResult(null)
     setLastOutcome(null)
 
@@ -327,10 +380,12 @@ export default function ChildQuestions() {
   }
 
   const handleNext = () => {
+    stopQuestionSpeech()
     setCurrentIndex((index) => Math.min(index + 1, questions.length - 1))
   }
 
   const handlePrev = () => {
+    stopQuestionSpeech()
     setCurrentIndex((index) => Math.max(index - 1, 0))
   }
 
@@ -394,7 +449,12 @@ export default function ChildQuestions() {
           </div>
         ) : (
           <>
-            <QuizContent content={current} onAnswer={handleAnswer} />
+            <QuizContent
+              content={current}
+              onAnswer={handleAnswer}
+              onSpeakQuestion={handleSpeakQuestion}
+              isSpeaking={speakingQuestionId === (current?.id ?? currentIndex)}
+            />
 
             <div className="lesson-navigation">
               <button className="nav-btn" onClick={handlePrev} disabled={currentIndex === 0}>← Trước</button>

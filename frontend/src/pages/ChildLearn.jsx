@@ -433,7 +433,7 @@ function LinkedMedia({ source, title }) {
   }
 
   return (
-    <div className="lesson-media-frame">
+    <div className="lesson-media-frame lesson-media-image-frame">
       <img
         className="lesson-media-image"
         src={source}
@@ -450,7 +450,7 @@ function ContentMedia({ media, fallback = '🙂', title = 'media bài học' }) 
 
   if (source && mediaKind === 'video') {
     return (
-      <div className="lesson-media-frame">
+      <div className="lesson-media-frame lesson-media-video-frame">
         <video
           className="lesson-media-video"
           src={source}
@@ -465,7 +465,7 @@ function ContentMedia({ media, fallback = '🙂', title = 'media bài học' }) 
 
   if (source && mediaKind === 'image') {
     return (
-      <div className="lesson-media-frame">
+      <div className="lesson-media-frame lesson-media-image-frame">
         <img className="lesson-media-image" src={source} alt={`Minh họa ${title}`} />
       </div>
     )

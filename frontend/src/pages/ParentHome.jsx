@@ -23,6 +23,53 @@ function emotionLabel(value) {
   return labels[value] || value || 'Chưa có dữ liệu'
 }
 
+function formatAlertTime(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+
+  return date.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function parseChatbotAlertReason(value) {
+  const raw = String(value || '').trim()
+  const severity = raw.match(/Mức độ:\s*([^|]+)/i)?.[1]?.trim().toLowerCase() || ''
+  const reason = raw.match(/Lý do:\s*([^|]+)/i)?.[1]?.trim()
+  const childMessage = raw.match(/Tin nhắn của trẻ:\s*(.+)$/i)?.[1]?.trim()
+
+  return {
+    severity,
+    reason: reason || raw || 'Chatbot ghi nhận nội dung cần phụ huynh chú ý.',
+    childMessage,
+  }
+}
+
+function alertSeverityLabel(value) {
+  const labels = {
+    low: 'Nhẹ',
+    medium: 'Cần chú ý',
+    high: 'Khẩn cấp',
+  }
+
+  return labels[value] || 'Cần chú ý'
+}
+
+function notificationStatusLabel(value) {
+  const labels = {
+    SENT: 'Đã gửi',
+    PENDING: 'Đang gửi',
+    FAILED: 'Gửi lỗi',
+    NO_DEVICES: 'Chưa có thiết bị nhận',
+  }
+
+  return labels[String(value || '').toUpperCase()] || 'Đã ghi nhận'
+}
+
 export default function ParentHome() {
   const [children, setChildren] = useState([])
   const [currentChildId, setCurrentChildId] = useState('')
@@ -75,6 +122,8 @@ export default function ParentHome() {
   const emotionSummary = useMemo(() => dashboard?.emotions || [], [dashboard])
   const dominantEmotion = [...emotionSummary].sort((a, b) => b.count - a.count)[0]
   const totalEmotionLogs = emotionSummary.reduce((sum, item) => sum + item.count, 0)
+  const chatbotAlerts = dashboard?.chatbot_alerts?.recent || []
+  const chatbotAlertTotal = dashboard?.chatbot_alerts?.total || 0
 
   const weeklyData = useMemo(() => {
     if (!emotionSummary.length) return fallbackWeeklyData
@@ -120,7 +169,8 @@ export default function ParentHome() {
       link.click()
       URL.revokeObjectURL(url)
     } catch (err) {
-      setError(err.message || 'Không xuất được PDF.')
+      console.error('Could not export parent summary PDF:', err)
+      setError('Không xuất được báo cáo PDF. Vui lòng kiểm tra kết nối và thử lại.')
     } finally {
       setExporting(false)
     }
@@ -153,7 +203,7 @@ export default function ParentHome() {
 
       <div className="greeting-container">
         <div className="greeting-left">
-          <h1 className="greeting-title">{getGreeting()}, {currentChild.nickname}</h1>
+          <h1 className="greeting-title">{getGreeting()}</h1>
           <p className="greeting-subtitle">Theo dõi hoạt động, điểm sao và cảm xúc của bé trong tuần này.</p>
         </div>
         <div className="child-badge">
@@ -165,6 +215,48 @@ export default function ParentHome() {
           </select>
         </div>
       </div>
+
+      <section className={`chatbot-alert-panel ${chatbotAlertTotal > 0 ? 'has-alerts' : ''}`}>
+        <div className="chatbot-alert-header">
+          <div>
+            <h2>Cảnh báo từ chatbot</h2>
+            <p>Khi bé nói nội dung tiêu cực hoặc có rủi ro, cảnh báo sẽ xuất hiện ở đây.</p>
+          </div>
+          <span className="chatbot-alert-count">{chatbotAlertTotal}</span>
+        </div>
+
+        <div className="chatbot-alert-list">
+          {chatbotAlerts.length === 0 && (
+            <div className="chatbot-alert-empty">
+              Chưa có cảnh báo nào trong 7 ngày gần đây.
+            </div>
+          )}
+
+          {chatbotAlerts.map((alert) => {
+            const parsed = parseChatbotAlertReason(alert.reason)
+            const severity = ['low', 'medium', 'high'].includes(parsed.severity) ? parsed.severity : 'medium'
+
+            return (
+              <article key={alert.id} className={`chatbot-alert-item severity-${severity}`}>
+                <div className="chatbot-alert-icon">!</div>
+                <div className="chatbot-alert-body">
+                  <div className="chatbot-alert-row">
+                    <strong>{alertSeverityLabel(severity)}</strong>
+                    <span>{formatAlertTime(alert.created_at)}</span>
+                  </div>
+                  <p>{parsed.reason}</p>
+                  {parsed.childMessage && (
+                    <blockquote>“{parsed.childMessage}”</blockquote>
+                  )}
+                  <span className="chatbot-alert-status">
+                    {notificationStatusLabel(alert.notification_status)}
+                  </span>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      </section>
 
       <div className="stats-cards-grid">
         <div className="stat-card stars-card">
