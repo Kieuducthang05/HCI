@@ -1,14 +1,58 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MdSupervisorAccount } from 'react-icons/md'
 import { authApi, childrenApi, clearSession, getSession, setSelectedChild } from '../services/api'
 import '../styles/Auth.css'
+
+const childPastelColors = [
+  { background: '#dff5e6', border: '#a9dec0', accent: '#5fae7a', text: '#2f7650' },
+  { background: '#dff2ff', border: '#a9d7f2', accent: '#4f9fca', text: '#236c93' },
+  { background: '#dbeeff', border: '#9fc9ef', accent: '#3d82c4', text: '#1f5f99' },
+  { background: '#fff2c7', border: '#efd889', accent: '#c49b28', text: '#7b6416' },
+  { background: '#f9dbe4', border: '#ebaebe', accent: '#c9617e', text: '#934457' },
+]
+
+function getStableColorIndex(value) {
+  const source = String(value || '')
+  let hash = 0
+
+  for (let index = 0; index < source.length; index += 1) {
+    hash = (hash * 31 + source.charCodeAt(index)) % childPastelColors.length
+  }
+
+  return hash
+}
+
+function getChildCards(children) {
+  const usedColorIndexes = new Set()
+
+  return children.map((child, index) => {
+    const baseColorIndex = getStableColorIndex(child.id || child.nickname || child.name || index)
+    let colorIndex = baseColorIndex
+
+    if (children.length <= childPastelColors.length) {
+      while (usedColorIndexes.has(colorIndex)) {
+        colorIndex = (colorIndex + 1) % childPastelColors.length
+      }
+    } else {
+      colorIndex = (baseColorIndex + index) % childPastelColors.length
+    }
+
+    usedColorIndexes.add(colorIndex)
+
+    return {
+      child,
+      color: childPastelColors[colorIndex],
+    }
+  })
+}
 
 export default function SelectUser() {
   const navigate = useNavigate()
   const [children, setChildren] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const childCards = useMemo(() => getChildCards(children), [children])
 
   useEffect(() => {
     const session = getSession()
@@ -81,7 +125,7 @@ export default function SelectUser() {
 
         <h1 className="select-user-title">Ai đang ở đây vậy?</h1>
 
-        <div className="profiles-row">
+        <div className={`profiles-row ${children.length >= 4 ? 'profiles-row-compact' : ''} ${children.length >= 4 ? 'profiles-row-scroll' : ''}`}>
           {/* Parent Card with MdSupervisorAccount Icon */}
           <div className="profile-card parent-card" onClick={handleSelectParent}>
             <div className="parent-icon-circle">
@@ -93,8 +137,18 @@ export default function SelectUser() {
 
           {/* Child Cards / Add Card */}
           {children.length > 0 ? (
-            children.map((child) => (
-              <div key={child.id} className="profile-card child-card-active" onClick={() => handleSelectChild(child)}>
+            childCards.map(({ child, color }) => (
+              <div
+                key={child.id}
+                className="profile-card child-card-active"
+                style={{
+                  '--profile-bg': color.background,
+                  '--profile-border': color.border,
+                  '--profile-accent': color.accent,
+                  '--profile-text': color.text,
+                }}
+                onClick={() => handleSelectChild(child)}
+              >
                 <div className="child-avatar-wrapper">
                   {child.avatar_url ? (
                     <img src={child.avatar_url} alt={child.nickname} className="child-avatar-img" />

@@ -1266,7 +1266,7 @@ body {
 }
 
 .star-icon {
-  width: 54px;
+  /* width: 54px; */
   height: 54px;
   display: inline-flex;
   align-items: center;

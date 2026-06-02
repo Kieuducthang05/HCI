@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useOutletContext } from 'react-router-dom'
+import { useOutletContext } from 'react-router-dom'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
 import { contentApi, getSelectedChild, setSelectedChild } from '../services/api'
 import '../styles/Child.css'
@@ -193,8 +193,7 @@ function QuizContent({ content, onAnswer }) {
 }
 
 export default function ChildQuestions() {
-  const navigate = useNavigate()
-  const { userStars, setUserStars } = useOutletContext()
+  const { setUserStars } = useOutletContext()
   const selectedChild = getSelectedChild()
   const [questions, setQuestions] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -204,8 +203,6 @@ export default function ChildQuestions() {
   const [error, setError] = useState('')
 
   const current = questions[currentIndex]
-  const displayStars = userStars ?? selectedChild?.total_stars ?? 0
-
   useEffect(() => {
     if (!selectedChild?.id) return
 
@@ -385,11 +382,6 @@ export default function ChildQuestions() {
           <div>
             <h2>Câu hỏi</h2>
             <p>Chọn đáp án đúng cho từng câu hỏi cảm xúc.</p>
-          </div>
-          <button className="question-back-btn" onClick={() => navigate('/child/home')} aria-label="Quay lại">←</button>
-          <div className="question-star-pill" aria-label={`${displayStars} sao`}>
-            <span>★</span>
-            <strong>{displayStars}</strong>
           </div>
         </div>
 

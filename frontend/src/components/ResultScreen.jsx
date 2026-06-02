@@ -37,6 +37,7 @@ function ResultDialog({
   explanation,
   encouragement,
   onContinue,
+  onDismiss,
   continueLabel = 'Tiếp tục →',
 }) {
   const isIncorrect = variant === 'incorrect'
@@ -51,7 +52,12 @@ function ResultDialog({
   ].filter(Boolean)
 
   return (
-    <div className={`result-overlay result-overlay-${variant}`} role="dialog" aria-modal="true">
+    <div
+      className={`result-overlay result-overlay-${variant}`}
+      role="dialog"
+      aria-modal="true"
+      onClick={onDismiss || onContinue}
+    >
       <div className="result-rocket" aria-hidden="true">🚀</div>
       <div className="result-sparkles" aria-hidden="true">
         <span>✦</span>
@@ -64,7 +70,10 @@ function ResultDialog({
         <span>{displayBanner}</span>
       </div>
 
-      <div className={`result-card ${isIncorrect ? 'incorrect-result' : 'correct-result'}`}>
+      <div
+        className={`result-card ${isIncorrect ? 'incorrect-result' : 'correct-result'}`}
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className={`result-medallion result-medallion-${variant}`} aria-hidden="true">
           {isIncorrect ? '!' : '★'}
         </div>
@@ -99,6 +108,7 @@ export function CorrectAnswer({
   rewardLabel,
   score,
   onContinue,
+  onDismiss,
   title = 'Hoàn thành xuất sắc!',
   bannerText,
   continueLabel = 'Tiếp tục →',
@@ -115,6 +125,7 @@ export function CorrectAnswer({
       continueLabel={continueLabel}
       messages={messages}
       onContinue={onContinue}
+      onDismiss={onDismiss}
     />
   )
 }
@@ -124,6 +135,7 @@ export function IncorrectAnswer({
   reward,
   rewardLabel,
   onContinue,
+  onDismiss,
   explanation,
   title = 'Chưa đúng rồi!',
   bannerText,
@@ -142,6 +154,7 @@ export function IncorrectAnswer({
       explanation={explanation}
       encouragement={encouragement}
       onContinue={onContinue}
+      onDismiss={onDismiss}
     />
   )
 }

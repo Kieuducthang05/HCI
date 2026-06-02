@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useOutletContext } from 'react-router-dom'
 import { getSelectedChild, petsApi } from '../services/api'
 import '../styles/Child.css'
 
@@ -23,8 +22,6 @@ function normalizeChildPet(childPet) {
 }
 
 export default function ChildInventory() {
-  const navigate = useNavigate()
-  const { userStars } = useOutletContext()
   const selectedChild = getSelectedChild()
   const [childPets, setChildPets] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -66,7 +63,7 @@ export default function ChildInventory() {
 
   const categories = [
     { id: 'all', label: 'Tất cả', emoji: '🎒' },
-    { id: 'active', label: 'Đang dùng', emoji: '⭐' },
+    { id: 'active', label: 'Đang dùng', emoji: '✓' },
   ]
 
   const handleUsePet = (item) => {
@@ -75,8 +72,6 @@ export default function ChildInventory() {
     setActivePetId(item.id)
   }
 
-  const displayStars = userStars ?? selectedChild?.total_stars ?? 0
-
   return (
     <div className="child-inventory">
       <div className="inventory-header">
@@ -84,17 +79,12 @@ export default function ChildInventory() {
           <h2>🎒 Kho vật phẩm</h2>
           <p>Những pet và vật phẩm ba mẹ đã đổi sao cho bé.</p>
         </div>
-        <button className="close-btn" onClick={() => navigate('/child/home')} aria-label="Về trang chủ">×</button>
       </div>
 
       <div className="inventory-stats">
         <div className="stat-box">
           <span className="stat-label">Vật phẩm đã có</span>
           <span className="stat-value">{inventory.length}</span>
-        </div>
-        <div className="stat-box">
-          <span className="stat-label">Sao hiện có</span>
-          <span className="stat-value">{displayStars}</span>
         </div>
       </div>
 

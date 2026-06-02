@@ -1,15 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
-import { getSelectedChild } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 // --- CÁC ICON SVG ---
-const CoinIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="12" cy="12" r="11" fill="#FCE596" />
-    <path d="M12 5L14 10L19 10L15 13L16.5 18L12 15L7.5 18L9 13L5 10L10 10L12 5Z" fill="#DCA846" />
-  </svg>
-);
-
 const BookIcon = () => (
   <svg width="45" height="45" viewBox="0 0 24 24" fill="#305196" xmlns="http://www.w3.org/2000/svg">
     <path d="M21 6.25C21 5.48 20.25 4.93 19.53 5.12C17.51 5.64 14.86 6.32 12 8C9.14 6.32 6.49 5.64 4.47 5.12C3.75 4.93 3 5.48 3 6.25V18.25C3 19.03 3.78 19.57 4.54 19.38C6.63 18.86 9.42 18.27 12 20C14.58 18.27 17.37 18.86 19.46 19.38C20.22 19.57 21 19.03 21 18.25V6.25Z" />
@@ -73,7 +65,9 @@ const ActionCard = ({ title, borderColor, bgColor, textColor, icon, onClick }) =
         backgroundColor: '#FFFFFF',
         cursor: 'pointer',
         boxShadow: '0 4px 6px rgba(0,0,0,0.02)',
-        width: '100%',
+        width: '80%',
+        height: '100%',
+        justifySelf: 'center',
         boxSizing: 'border-box',
         transition: 'transform 0.1s ease-in-out',
       }}
@@ -106,9 +100,6 @@ const ActionCard = ({ title, borderColor, bgColor, textColor, icon, onClick }) =
 // --- COMPONENT CHÍNH ---
 export default function ChildHome() {
   const navigate = useNavigate();
-  const outletContext = useOutletContext();
-  const selectedChild = getSelectedChild();
-  const starCount = Number(outletContext?.userStars ?? selectedChild?.total_stars ?? 0);
   // Giữ lại state nếu sau này bạn muốn thay đổi câu chào linh hoạt
   const [greeting] = useState('Hôm nay con muốn làm gì?');
 
@@ -124,29 +115,24 @@ export default function ChildHome() {
         display: 'flex', 
         justifyContent: 'center', 
         paddingTop: '40px',
-        fontFamily: 'sans-serif'
+        fontFamily: 'var(--sans)'
       }}
     >
       <div 
         style={{ 
           backgroundColor: '#FDFDFD', 
-          width: '100%', 
-          maxWidth: '550px', 
+          width: '66vw',
+          height: '75vh',
           borderRadius: '32px', 
           padding: '24px 32px 48px 32px',
           boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
         }}
       >
         
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FCEDC9', padding: '6px 16px', borderRadius: '20px' }}>
-            <CoinIcon />
-            <span style={{ color: '#DCA846', fontWeight: 'bold', fontSize: '16px' }}>{starCount}</span>
-          </div>
-        </div>
-
         {/* Tiêu đề */}
         <h1 style={{ textAlign: 'center', fontSize: '26px', fontWeight: '800', color: '#0F172A', marginBottom: '32px', marginTop: '0' }}>
           {greeting}
@@ -157,8 +143,13 @@ export default function ChildHome() {
           style={{ 
             display: 'grid', 
             gridTemplateColumns: 'repeat(2, 1fr)', 
-            gap: '20px',
-            width: '100%'
+            gridTemplateRows: 'repeat(2, minmax(0, 1fr))',
+            columnGap: '4px',
+            rowGap: '28px',
+            width: '100%',
+            justifyItems: 'center',
+            flex: '1 1 auto',
+            minHeight: 0
           }}
         >
           <ActionCard 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useOutletContext } from 'react-router-dom'
+import { useOutletContext } from 'react-router-dom'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
 import { contentApi, getSelectedChild, setSelectedChild, trackingApi, visionApi } from '../services/api'
 import { captureDetectedFace } from '../utils/faceCapture'
@@ -295,10 +295,6 @@ const games = {
   emotionImitation: emotionImitationGames,
 }
 
-function formatGameScore(value) {
-  return Number(value || 0).toLocaleString('vi-VN')
-}
-
 function getEmotionTone(emotion) {
   const key = normalize(emotion)
   return {
@@ -312,21 +308,6 @@ function getEmotionTone(emotion) {
     fear: 'surprised',
     surprised: 'surprised',
   }[key] || 'happy'
-}
-
-function GamePlayTopbar({ onBack, score, scoreLabel = '' }) {
-  return (
-    <div className="game-screen-topbar">
-      <button className="game-screen-back" onClick={onBack} aria-label="Quay lại">
-        ←
-      </button>
-      <div className={`game-screen-score ${scoreLabel ? 'has-label' : ''}`}>
-        <span className="game-screen-score-icon" aria-hidden="true">★</span>
-        {scoreLabel && <span className="game-screen-score-label">{scoreLabel}</span>}
-        <strong>{formatGameScore(score)}</strong>
-      </div>
-    </div>
-  )
 }
 
 function GameStepProgress({ currentIndex, total }) {
@@ -453,8 +434,7 @@ const gameOptions = [
 ]
 
 export default function ChildGames() {
-  const navigate = useNavigate()
-  const { userStars, setUserStars } = useOutletContext()
+  const { setUserStars } = useOutletContext()
   const selectedChild = getSelectedChild()
   const videoRef = useRef(null)
   const streamRef = useRef(null)
@@ -525,8 +505,6 @@ export default function ChildGames() {
     },
     [currentGame, activeGameList, gameContents, gameIndex],
   )
-  const displayStars = userStars ?? selectedChild?.total_stars ?? 0
-
   const startGame = (gameId) => {
     setCurrentGame(gameId)
     setGameIndex(0)
@@ -720,10 +698,6 @@ export default function ChildGames() {
             </div>
           ))}
         </div>
-
-        <button className="back-to-home" onClick={() => navigate('/child/home')}>
-          ← Quay lại
-        </button>
       </div>
     )
   }
@@ -767,10 +741,6 @@ export default function ChildGames() {
     return (
       <div className="imitation-game">
         {feedbackOverlay}
-        <div className="game-header">
-          <button className="game-back" onClick={() => { backToMenu(); stopCamera(); }}>←</button>
-          <div className="game-score">⭐ {score}</div>
-        </div>
 
         <div className="imitation-content">
           <div className="target-card">
@@ -807,7 +777,6 @@ export default function ChildGames() {
     return (
       <div className="choose-emotion-game game-play-shell game1-shell">
         {feedbackOverlay}
-        <GamePlayTopbar onBack={backToMenu} score={displayStars} scoreLabel="Score:" />
 
         <div className="choose-emotion-content">
           <h2 className="game1-title">
@@ -856,7 +825,6 @@ export default function ChildGames() {
     return (
       <div className="game-play-shell game2-shell">
         {feedbackOverlay}
-        <GamePlayTopbar onBack={backToMenu} score={displayStars} />
 
         <ReactionScenarioArt data={currentGameData} />
 
@@ -887,7 +855,6 @@ export default function ChildGames() {
       total={activeGameList.length}
       selectedChild={selectedChild}
       feedbackOverlay={feedbackOverlay}
-      onBack={backToMenu}
       onAnswer={handleGameAnswer}
     />
   )
@@ -900,7 +867,6 @@ function ExpressionGame({
   total,
   selectedChild,
   feedbackOverlay,
-  onBack,
   onAnswer,
 }) {
   const videoRef = useRef(null)
@@ -999,15 +965,6 @@ function ExpressionGame({
   return (
     <div className="expression-game-shell">
       {feedbackOverlay}
-      <div className="expression-game-topbar">
-        <button className="expression-game-back" onClick={onBack} aria-label="Quay lại">
-          ←
-        </button>
-        <div className="expression-game-score">
-          <span aria-hidden="true">✪</span>
-          <strong>{score}</strong>
-        </div>
-      </div>
 
       <div className="expression-game-progress" aria-label={`Tiến độ ${currentIndex + 1}/${total}`}>
         <div style={{ width: `${((currentIndex + 1) / total) * 100}%` }}></div>

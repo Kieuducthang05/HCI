@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useOutletContext } from 'react-router-dom'
+import { useOutletContext } from 'react-router-dom'
+import { FiBookOpen, FiSmile } from 'react-icons/fi'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
 import { contentApi, getSelectedChild, setSelectedChild, trackingApi } from '../services/api'
 import { captureDetectedFace } from '../utils/faceCapture'
@@ -144,8 +145,7 @@ function makeSessionKey(contentId) {
 }
 
 export default function ChildLearn() {
-  const navigate = useNavigate()
-  const { userStars, setUserStars } = useOutletContext()
+  const { setUserStars } = useOutletContext()
   const selectedChild = getSelectedChild()
   const [currentTab, setCurrentTab] = useState('LECTURE')
   const [contents, setContents] = useState([])
@@ -305,6 +305,11 @@ export default function ChildLearn() {
     }
   }
 
+  const handleDismissResult = () => {
+    setShowResult(null)
+    setLastOutcome(null)
+  }
+
   const handleExpressionResult = ({ isCorrect, targetEmotion, detectedEmotion, confidence }) => {
     const confidencePercent = Math.round(confidence * 100)
     setLastOutcome({
@@ -347,6 +352,7 @@ export default function ChildLearn() {
           rewardLabel={lastOutcome?.rewardLabel}
           title="Hoàn thành xuất sắc!"
           onContinue={handleContinueResult}
+          onDismiss={handleDismissResult}
         />
       )}
 
@@ -358,15 +364,18 @@ export default function ChildLearn() {
           continueLabel="Tiếp tục →"
           encouragement="Không sao, con đã học thêm được một điều mới."
           onContinue={handleContinueResult}
+          onDismiss={handleDismissResult}
         />
       )}
 
       <div className="lesson-tabs">
         <button className={`tab ${currentTab === 'LECTURE' ? 'active' : ''}`} onClick={() => switchTab('LECTURE')}>
-          📘 Bài học
+          <FiBookOpen className="tab-icon" aria-hidden="true" />
+          <span>Bài học</span>
         </button>
         <button className={`tab ${currentTab === 'EXPRESS' ? 'active' : ''}`} onClick={() => switchTab('EXPRESS')}>
-          😊 Thể hiện cảm xúc
+          <FiSmile className="tab-icon" aria-hidden="true" />
+          <span>Thể hiện cảm xúc</span>
         </button>
       </div>
 
@@ -375,8 +384,6 @@ export default function ChildLearn() {
       {currentTab === 'EXPRESS' ? (
         <ExpressionLesson
           selectedChild={selectedChild}
-          userStars={userStars}
-          onBack={() => navigate('/child/home')}
           onResult={handleExpressionResult}
         />
       ) : !current ? (
@@ -385,7 +392,7 @@ export default function ChildLearn() {
           <p>Hãy tạo nội dung trong trang Admin hoặc chạy lại seed database.</p>
         </div>
       ) : (
-        <div className="lesson-card">
+        <div className="lesson-card lesson-lecture-card">
           <LectureContent content={current} onComplete={handleCompleteLecture} />
 
           <div className="lesson-navigation">
@@ -402,10 +409,6 @@ export default function ChildLearn() {
           </div>
         </div>
       )}
-
-      <button className="back-to-home" onClick={() => navigate('/child/home')}>
-        ← Quay lại
-      </button>
     </div>
   )
 }
@@ -496,7 +499,7 @@ function LectureContent({ content, onComplete }) {
   )
 }
 
-function ExpressionLesson({ selectedChild, userStars, onBack, onResult }) {
+function ExpressionLesson({ selectedChild, onResult }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [emotionIndex, setEmotionIndex] = useState(0)
@@ -598,16 +601,6 @@ function ExpressionLesson({ selectedChild, userStars, onBack, onResult }) {
 
   return (
     <section className="express-lesson-shell">
-      <div className="express-lesson-topbar">
-        <button className="express-back-btn" onClick={onBack} aria-label="Quay lại">
-          ←
-        </button>
-        <div className="express-star-pill">
-          <span aria-hidden="true">✪</span>
-          <strong>{Number(userStars || 0).toLocaleString()}</strong>
-        </div>
-      </div>
-
       <div className="express-lesson-content">
         <h2>Con hãy làm biểu cảm giống bạn này nhé!</h2>
         <div className="express-title-mark" aria-hidden="true"></div>

@@ -1,4 +1,117 @@
 /* Quiz Section */
+.child-lesson .lesson-tabs {
+  width: min(66.666vw, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 0 0 16px;
+}
+
+.child-lesson .tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  border: 2px solid rgba(43, 80, 161, 0.2);
+  background: #ffffff;
+  color: #2b50a1;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.child-lesson .tab.active {
+  background: #2b50a1;
+  border-color: #2b50a1;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(43, 80, 161, 0.22);
+}
+
+.child-lesson .tab-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke-width: 2.4;
+}
+
+.child-lesson .lesson-lecture-card {
+  width: 66.666vw;
+  height: 75vh;
+  min-height: 0;
+  margin: 0 auto 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.lesson-lecture-card > .emotion-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lesson-lecture-card .lesson-media-frame {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lesson-lecture-card .lesson-media-video,
+.lesson-lecture-card .lesson-media-image,
+.lesson-lecture-card .lesson-media-iframe {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+  object-fit: contain;
+}
+
+.lesson-lecture-card .emotion-circle {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: min(100%, 360px);
+  max-height: 100%;
+  aspect-ratio: 1;
+  margin-bottom: 12px;
+}
+
+.lesson-lecture-card .emotion-title {
+  flex: 0 0 auto;
+  margin-bottom: 6px;
+  font-size: 20px;
+  line-height: 1.2;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.lesson-lecture-card .emotion-description {
+  flex: 0 0 auto;
+  margin-bottom: 10px;
+  line-height: 1.35;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.lesson-lecture-card .learn-complete-btn {
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding: 12px 20px;
+}
+
+.lesson-lecture-card .lesson-navigation {
+  flex: 0 0 auto;
+  margin-top: 10px;
+}
+
 .lesson-media-frame {
   width: min(100%, 620px);
   margin: 0 auto 18px;
@@ -188,34 +301,6 @@
   transform: translateY(-1px);
 }
 
-.question-star-pill {
-  min-width: 136px;
-  min-height: 56px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 8px 22px;
-  border-radius: 999px;
-  background: #fff0bf;
-  color: #e2a94a;
-  font-size: 20px;
-  font-weight: 900;
-  box-shadow: 0 14px 28px rgba(226, 169, 74, 0.16);
-}
-
-.question-star-pill span {
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #e2a94a;
-  color: #ffffff;
-  font-size: 13px;
-}
-
 .question-page .quiz-media-card {
   width: 100%;
   margin-top: 20px;
@@ -387,32 +472,6 @@
 .express-back-btn:hover {
   background: #e7e4df;
   transform: translateY(-1px);
-}
-
-.express-star-pill {
-  min-width: 100px;
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 999px;
-  background: #f6e8bd;
-  color: #7a5a0d;
-  font-size: 15px;
-}
-
-.express-star-pill span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #9a730f;
-  color: #ffffff;
-  font-size: 11px;
 }
 
 .express-lesson-content {
@@ -801,13 +860,6 @@
     font-size: 30px;
   }
 
-  .question-star-pill {
-    min-width: 112px;
-    min-height: 48px;
-    padding: 7px 18px;
-    font-size: 18px;
-  }
-
   .question-page .quiz-media-card {
     margin-top: 18px;
   }
@@ -850,17 +902,6 @@
     width: 48px;
     height: 48px;
     font-size: 28px;
-  }
-
-  .question-star-pill {
-    min-width: 100px;
-    min-height: 44px;
-    font-size: 17px;
-  }
-
-  .question-star-pill span {
-    width: 20px;
-    height: 20px;
   }
 
   .question-page .lesson-media-frame,

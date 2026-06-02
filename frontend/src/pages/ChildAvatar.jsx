@@ -33,7 +33,6 @@ export default function ChildAvatar() {
     <div className="child-avatar-page">
       <div className="avatar-header">
         <h2>👤 Avatar của bé</h2>
-        <button className="close-btn" onClick={() => navigate('/child/home')}>✕</button>
       </div>
 
       <div className="avatar-display">
