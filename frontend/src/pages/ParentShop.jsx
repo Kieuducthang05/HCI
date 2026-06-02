@@ -159,7 +159,7 @@ export default function ParentShop() {
       <div className="shop-header">
         <div className="shop-title-section">
           <h1 className="shop-title">Cửa hàng đổi sao</h1>
-          <p className="shop-description">Sử dụng sao của bé để mở khóa thú cưng đồng hành.</p>
+          <p className="shop-description">Sử dụng sao của bé để mở khóa thú cưng đồng hành</p>
         </div>
 
         <div className="shop-stars-display">

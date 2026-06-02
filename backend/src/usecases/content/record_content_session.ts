@@ -5,6 +5,8 @@ import {
   finishContentSessionTx,
   getChildContentUnlockByContentId,
   getContentSessionByChildIdempotencyKey,
+  getRewardedContentSessionByUnlock,
+  lockContentSessionReward,
 } from "../../db/queries/learning_queries.ts";
 import { getChildProfileById } from "../../db/queries/child_profile_queries.ts";
 import { getContentRewardStars } from "../../domain/reward_policy.ts";
@@ -34,6 +36,7 @@ export type RecordContentSessionErrorType =
   | "INVALID_COMPLETED_AT"
   | "INVALID_METADATA"
   | "INVALID_EMOTION"
+  | "CONTENT_ALREADY_REWARDED"
   | "INTERNAL_ERROR";
 
 export type RecordContentSessionInput = {
@@ -345,6 +348,23 @@ export async function recordContentSession(
         }
       }
 
+      if (content.type === "QUIZ" && rewardStars > 0) {
+        await lockContentSessionReward(tx, childId, unlock.id);
+        const existingRewardedSession = await getRewardedContentSessionByUnlock(
+          tx,
+          childId,
+          unlock.id,
+        );
+
+        if (existingRewardedSession) {
+          throw new AppError<RecordContentSessionErrorType>(
+            "CONTENT_ALREADY_REWARDED",
+            "Quiz already completed and rewarded for this child.",
+            409,
+          );
+        }
+      }
+
       return await finishContentSessionTx(
         tx,
         {
@@ -382,6 +402,14 @@ export async function recordContentSession(
         throw new AppError<RecordContentSessionErrorType>(
           "IDEMPOTENCY_KEY_CONFLICT",
           "idempotency_key was already used for a different content session.",
+          409,
+        );
+      }
+
+      if (constraint === "content_sessions_one_reward_per_content_idx") {
+        throw new AppError<RecordContentSessionErrorType>(
+          "CONTENT_ALREADY_REWARDED",
+          "Quiz already completed and rewarded for this child.",
           409,
         );
       }
