@@ -385,6 +385,47 @@
   text-align: center;
 }
 
+.question-speak-btn {
+  min-width: 190px;
+  min-height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto 28px;
+  padding: 12px 22px;
+  border: 3px solid #b8d9cf;
+  border-radius: 999px;
+  background: #eef8f3;
+  color: #315f55;
+  font-size: 17px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(72, 112, 100, 0.12);
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.question-speak-btn:hover {
+  background: #e5f4ee;
+  border-color: #8fbfa9;
+  transform: translateY(-2px);
+}
+
+.question-speak-btn.active {
+  background: #fff0bf;
+  border-color: #f0d37a;
+  color: #84620d;
+}
+
+.question-speak-btn span {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
 .question-page .quiz-options {
   display: grid;
   grid-template-columns: repeat(4, minmax(122px, 156px));
