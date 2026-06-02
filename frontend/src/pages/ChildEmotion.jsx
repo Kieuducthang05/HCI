@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getSelectedChild, trackingApi } from '../services/api'
+import { getSelectedChild, trackingApi, visionApi } from '../services/api'
 import { captureDetectedFace } from '../utils/faceCapture'
 import '../styles/Child.css'
 

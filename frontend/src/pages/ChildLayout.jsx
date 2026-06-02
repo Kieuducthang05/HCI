@@ -29,15 +29,10 @@ export default function ChildLayout() {
   }, [])
 
   const menuItems = [
-<<<<<<< HEAD
     { id: 'home', label: 'Trang chủ', icon: <FiHome /> },
     { id: 'emotion', label: 'Cảm xúc', icon: <FiSmile /> },
     { id: 'avatar', label: 'Avatar', icon: <FiUser /> },
     { id: 'inventory', label: 'Kho', icon: <FiPackage /> }
-=======
-    { id: 'home', label: 'Trang chủ', icon: '🏠' },
-    { id: 'inventory', label: 'Vật phẩm', icon: '💎' }
->>>>>>> becf1ffadd0d6378390c4ddaacca0e0e00efe293
   ]
 
   const handleMenuClick = (menuId) => {

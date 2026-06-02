@@ -10,13 +10,6 @@ const CoinIcon = () => (
   </svg>
 );
 
-const CloseIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A8B2BD" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
-
 const BookIcon = () => (
   <svg width="45" height="45" viewBox="0 0 24 24" fill="#305196" xmlns="http://www.w3.org/2000/svg">
     <path d="M21 6.25C21 5.48 20.25 4.93 19.53 5.12C17.51 5.64 14.86 6.32 12 8C9.14 6.32 6.49 5.64 4.47 5.12C3.75 4.93 3 5.48 3 6.25V18.25C3 19.03 3.78 19.57 4.54 19.38C6.63 18.86 9.42 18.27 12 20C14.58 18.27 17.37 18.86 19.46 19.38C20.22 19.57 21 19.03 21 18.25V6.25Z" />
@@ -152,13 +145,6 @@ export default function ChildHome() {
             <CoinIcon />
             <span style={{ color: '#DCA846', fontWeight: 'bold', fontSize: '16px' }}>{starCount}</span>
           </div>
-          {/* Nút X: Tôi set cho nó chức năng quay lại trang trước (Go back) */}
-          <button 
-            onClick={() => navigate(-1)}
-            style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #F0F2F5', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-          >
-            <CloseIcon />
-          </button>
         </div>
 
         {/* Tiêu đề */}

@@ -1,35 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
-import { contentApi, getSelectedChild, setSelectedChild, trackingApi } from '../services/api'
+import { contentApi, getSelectedChild, setSelectedChild, trackingApi, visionApi } from '../services/api'
 import { captureDetectedFace } from '../utils/faceCapture'
 import '../styles/Child.css'
-
-// Helper to capture video frame
-function captureVideoFrame(video) {
-  return new Promise((resolve, reject) => {
-    if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
-      reject(new Error('Camera chưa sẵn sàng.'))
-      return
-    }
-    const canvas = document.createElement('canvas')
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    const context = canvas.getContext('2d')
-    if (!context) {
-      reject(new Error('Không hỗ trợ canvas.'))
-      return
-    }
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        reject(new Error('Lỗi chụp ảnh.'))
-        return
-      }
-      resolve(new File([blob], `game-frame-${Date.now()}.jpg`, { type: 'image/jpeg' }))
-    }, 'image/jpeg', 0.9)
-  })
-}
 
 const gameContentKeys = {
   chooseEmotion: ['choose-emotion-happy', 'choose-emotion-sad', 'choose-emotion-calm'],
@@ -495,12 +469,6 @@ export default function ChildGames() {
   const [isScanning, setIsScanning] = useState(false)
   const [cameraError, setCameraError] = useState('')
 
-  useEffect(() => {
-    return () => {
-      stopCamera()
-    }
-  }, [])
-
   const startCamera = async () => {
     setCameraError('')
     try {
@@ -510,7 +478,7 @@ export default function ChildGames() {
         videoRef.current.srcObject = stream
       }
       setIsCameraOn(true)
-    } catch (err) {
+    } catch {
       setCameraError('Không thể mở camera. Hãy kiểm tra quyền truy cập.')
     }
   }
@@ -521,6 +489,12 @@ export default function ChildGames() {
     if (videoRef.current) videoRef.current.srcObject = null
     setIsCameraOn(false)
   }
+
+  useEffect(() => {
+    return () => {
+      stopCamera()
+    }
+  }, [])
 
   useEffect(() => {
     if (!selectedChild?.id) {
