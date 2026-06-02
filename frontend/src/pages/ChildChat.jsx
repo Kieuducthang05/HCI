@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { chatbotApi, getSelectedChild, trackingApi } from '../services/api'
+import { chatbotApi, getSelectedChild, preferencesApi, trackingApi } from '../services/api'
 import '../styles/ChildChat.css'
 
 const BunnyIcon = () => (
@@ -27,6 +27,32 @@ function formatParentAlertReason(alert) {
   return [severity, reason, childMessage].filter(Boolean).join(' | ').slice(0, 1000)
 }
 
+function formatRegulationAlertReason(alert, config, elapsedSeconds) {
+  const baseReason = formatParentAlertReason(alert)
+  const supportContact = config.contact ? `Người hỗ trợ: ${config.contact}` : ''
+  const regulationMethod = `Điều hòa cảm xúc: mở Góc bình tĩnh cho trẻ`
+  const elapsed = `Cảm xúc tiêu cực kéo dài: ${elapsedSeconds} giây`
+
+  return [baseReason, elapsed, supportContact, regulationMethod].filter(Boolean).join(' | ').slice(0, 1000)
+}
+
+function normalizeRegulationConfig(value) {
+  const rawAlertAfter = String(value?.alertAfter || '60')
+  const alertAfter = ['60', '120'].includes(rawAlertAfter) ? rawAlertAfter : '60'
+
+  return {
+    method: ['breathing', 'quiet', 'music', 'parent'].includes(value?.method) ? value.method : 'breathing',
+    contact: typeof value?.contact === 'string' && value.contact.trim() ? value.contact.trim() : 'Mẹ',
+    alertAfter,
+    quietMode: typeof value?.quietMode === 'boolean' ? value.quietMode : true,
+  }
+}
+
+function getAlertThresholdMs(config) {
+  const seconds = Number(config.alertAfter || 60)
+  return Math.max(60, Number.isFinite(seconds) ? seconds : 60) * 1000
+}
+
 function buildChildProfile(child) {
   if (!child) return null
 
@@ -44,6 +70,9 @@ export default function ChildChat() {
   const navigate = useNavigate()
   const selectedChild = getSelectedChild()
   const childName = selectedChild?.nickname || selectedChild?.name || 'em'
+  const [regulationConfig, setRegulationConfig] = useState(() => {
+    return normalizeRegulationConfig(selectedChild?.preferences?.preferences?.regulation)
+  })
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -57,6 +86,13 @@ export default function ChildChat() {
   const [chatHistory, setChatHistory] = useState([])
   const [conversationSummary, setConversationSummary] = useState('')
   const messagesEndRef = useRef(null)
+  const negativeStateRef = useRef({
+    since: null,
+    timerId: null,
+    latestAlert: null,
+    alertSent: false,
+  })
+  const regulationConfigRef = useRef(regulationConfig)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -65,6 +101,101 @@ export default function ChildChat() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  useEffect(() => {
+    regulationConfigRef.current = regulationConfig
+  }, [regulationConfig])
+
+  useEffect(() => {
+    if (!selectedChild?.id) return undefined
+
+    let mounted = true
+    preferencesApi.get(selectedChild.id)
+      .then((result) => {
+        if (!mounted) return
+        setRegulationConfig(normalizeRegulationConfig(result.preferences?.preferences?.regulation))
+      })
+      .catch(() => {
+        // Keep the default one-minute threshold if preferences cannot be loaded.
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [selectedChild?.id])
+
+  useEffect(() => {
+    const negativeState = negativeStateRef.current
+
+    return () => {
+      if (negativeState.timerId) {
+        window.clearTimeout(negativeState.timerId)
+      }
+    }
+  }, [])
+
+  const resetNegativeEmotionWatch = () => {
+    const state = negativeStateRef.current
+    if (state.timerId) {
+      window.clearTimeout(state.timerId)
+    }
+
+    state.since = null
+    state.timerId = null
+    state.latestAlert = null
+    state.alertSent = false
+  }
+
+  const openCalmCornerWithAlert = () => {
+    const state = negativeStateRef.current
+    if (state.alertSent || !state.latestAlert) return
+
+    const config = regulationConfigRef.current
+    const elapsedSeconds = Math.round((Date.now() - (state.since || Date.now())) / 1000)
+    const alertReason = formatRegulationAlertReason(state.latestAlert, config, elapsedSeconds)
+    state.alertSent = true
+
+    if (selectedChild?.id) {
+      trackingApi.createAlert(selectedChild.id, alertReason).catch((error) => {
+        console.error('Could not record prolonged negative emotion alert:', error)
+      })
+    }
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        sender: 'thỏ',
+        text: 'Thỏ sẽ mở Góc bình tĩnh để con hít thở chậm một chút nhé.',
+        timestamp: new Date(),
+      },
+    ])
+
+    window.setTimeout(() => {
+      navigate('/child/calm-corner')
+    }, 900)
+  }
+
+  const scheduleNegativeEmotionWatch = (alert) => {
+    const state = negativeStateRef.current
+    state.latestAlert = alert
+
+    if (!state.since) {
+      state.since = Date.now()
+      state.alertSent = false
+    }
+
+    if (state.timerId || state.alertSent) return
+
+    const thresholdMs = getAlertThresholdMs(regulationConfigRef.current)
+    const elapsedMs = Date.now() - state.since
+    const delayMs = Math.max(0, thresholdMs - elapsedMs)
+
+    state.timerId = window.setTimeout(() => {
+      state.timerId = null
+      openCalmCornerWithAlert()
+    }, delayMs)
+  }
 
   const quickReplies = [
     '😊 Tôi vui vẻ',
@@ -118,12 +249,9 @@ export default function ChildChat() {
       })
 
       if (result.parent_alert?.reason) {
-        const alertReason = formatParentAlertReason(result.parent_alert)
-        if (selectedChild?.id) {
-          trackingApi.createAlert(selectedChild.id, alertReason).catch((error) => {
-            console.error('Could not record chatbot alert:', error)
-          })
-        }
+        scheduleNegativeEmotionWatch(result.parent_alert)
+      } else if (result.input_filter?.status === false) {
+        resetNegativeEmotionWatch()
       }
     } catch (error) {
       console.error('Chatbot request failed:', error)
@@ -155,12 +283,6 @@ export default function ChildChat() {
   return (
     <div className="child-chat-container">
       <div className="chat-header">
-        <button className="back-btn" onClick={() => navigate('/child/home')}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span>Quay lại</span>
-        </button>
         <div className="chat-header-title">
           <div className="bunny-icon-header">
             <BunnyIcon />

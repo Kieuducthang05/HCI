@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useOutletContext } from 'react-router-dom'
+import { useOutletContext } from 'react-router-dom'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
 import { contentApi, getSelectedChild, setSelectedChild, trackingApi } from '../services/api'
 import { captureDetectedFace } from '../utils/faceCapture'
@@ -144,7 +144,6 @@ function makeSessionKey(contentId) {
 }
 
 export default function ChildLearn() {
-  const navigate = useNavigate()
   const { userStars, setUserStars } = useOutletContext()
   const selectedChild = getSelectedChild()
   const [currentTab, setCurrentTab] = useState('LECTURE')
@@ -376,7 +375,6 @@ export default function ChildLearn() {
         <ExpressionLesson
           selectedChild={selectedChild}
           userStars={userStars}
-          onBack={() => navigate('/child/home')}
           onResult={handleExpressionResult}
         />
       ) : !current ? (
@@ -402,10 +400,6 @@ export default function ChildLearn() {
           </div>
         </div>
       )}
-
-      <button className="back-to-home" onClick={() => navigate('/child/home')}>
-        ← Quay lại
-      </button>
     </div>
   )
 }
@@ -430,7 +424,7 @@ function LinkedMedia({ source, title }) {
   }
 
   return (
-    <div className="lesson-media-frame">
+    <div className="lesson-media-frame lesson-media-image-frame">
       <img
         className="lesson-media-image"
         src={source}
@@ -447,7 +441,7 @@ function ContentMedia({ media, fallback = '🙂', title = 'media bài học' }) 
 
   if (source && mediaKind === 'video') {
     return (
-      <div className="lesson-media-frame">
+      <div className="lesson-media-frame lesson-media-video-frame">
         <video
           className="lesson-media-video"
           src={source}
@@ -462,7 +456,7 @@ function ContentMedia({ media, fallback = '🙂', title = 'media bài học' }) 
 
   if (source && mediaKind === 'image') {
     return (
-      <div className="lesson-media-frame">
+      <div className="lesson-media-frame lesson-media-image-frame">
         <img className="lesson-media-image" src={source} alt={`Minh họa ${title}`} />
       </div>
     )
@@ -496,7 +490,7 @@ function LectureContent({ content, onComplete }) {
   )
 }
 
-function ExpressionLesson({ selectedChild, userStars, onBack, onResult }) {
+function ExpressionLesson({ selectedChild, userStars, onResult }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [emotionIndex, setEmotionIndex] = useState(0)
@@ -599,11 +593,8 @@ function ExpressionLesson({ selectedChild, userStars, onBack, onResult }) {
   return (
     <section className="express-lesson-shell">
       <div className="express-lesson-topbar">
-        <button className="express-back-btn" onClick={onBack} aria-label="Quay lại">
-          ←
-        </button>
         <div className="express-star-pill">
-          <span aria-hidden="true">✪</span>
+          <span aria-hidden="true">★</span>
           <strong>{Number(userStars || 0).toLocaleString()}</strong>
         </div>
       </div>

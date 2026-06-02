@@ -882,7 +882,7 @@ function ExpressionGame({
           ←
         </button>
         <div className="expression-game-score">
-          <span aria-hidden="true">✪</span>
+          <span aria-hidden="true">★</span>
           <strong>{score}</strong>
         </div>
       </div>

@@ -388,7 +388,7 @@ export default function ChildQuestions() {
           </div>
           <button className="question-back-btn" onClick={() => navigate('/child/home')} aria-label="Quay lại">←</button>
           <div className="question-star-pill" aria-label={`${displayStars} sao`}>
-            <span>★</span>
+            <span aria-hidden="true">★</span>
             <strong>{displayStars}</strong>
           </div>
         </div>

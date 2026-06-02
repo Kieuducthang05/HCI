@@ -149,22 +149,44 @@ body.dark-mode {
 }
 
 .star-display {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 6px 12px;
-  border-radius: 20px;
-  display: flex;
+  min-height: 44px;
+  min-width: 96px;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 600;
-  font-size: 14px;
+  justify-content: center;
+  gap: 9px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #fff0bf;
+  color: #d49b32;
+  box-shadow: 0 12px 24px rgba(226, 169, 74, 0.14);
+  font-weight: 900;
+  font-size: 18px;
 }
 
 .star-icon {
-  font-size: 16px;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #f6d270;
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.star-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
 }
 
 .star-count {
-  color: white;
+  color: #d49b32;
+  line-height: 1;
 }
 
 .logout-btn-child {
@@ -2048,28 +2070,30 @@ body.dark-mode {
 
 .expression-game-score {
   min-width: 96px;
-  min-height: 40px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 9px;
   padding: 8px 16px;
   border-radius: 999px;
-  background: #f6e8bd;
-  color: #74560b;
-  font-size: 17px;
+  background: #fff0bf;
+  color: #d49b32;
+  box-shadow: 0 12px 24px rgba(226, 169, 74, 0.14);
+  font-size: 18px;
+  font-weight: 900;
 }
 
 .expression-game-score span {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #8c690d;
+  background: #f6d270;
   color: #ffffff;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .expression-game-progress {
@@ -2495,7 +2519,7 @@ body.dark-mode {
 
 .game-screen-score {
   min-height: 44px;
-  min-width: 112px;
+  min-width: 96px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2503,8 +2527,8 @@ body.dark-mode {
   padding: 8px 18px;
   border-radius: 999px;
   background: #fff0bf;
-  color: #8c690d;
-  font-size: 17px;
+  color: #d49b32;
+  font-size: 18px;
   font-weight: 900;
   box-shadow: 0 12px 24px rgba(226, 169, 74, 0.14);
 }
@@ -2514,15 +2538,15 @@ body.dark-mode {
 }
 
 .game-screen-score-icon {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #8c690d;
+  background: #f6d270;
   color: #ffffff;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .game-screen-score-label {

@@ -9,7 +9,7 @@ export default function ChildLayout() {
   const selectedChild = getSelectedChild()
   const [userStars, setUserStars] = useState(selectedChild?.total_stars || 0)
   const activeMenu = location.pathname.split('/')[2] || 'home'
-  const isPlainChildPage = ['questions', 'games'].includes(activeMenu)
+  const isPlainChildPage = ['questions', 'games', 'calm-corner'].includes(activeMenu)
 
   useEffect(() => {
     const child = getSelectedChild()
@@ -66,7 +66,7 @@ export default function ChildLayout() {
         </nav>
         <div className="topbar-right">
           <div className="star-display">
-            <span className="star-icon">⭐</span>
+            <span className="star-icon" aria-hidden="true">★</span>
             <span className="star-count">{userStars}</span>
           </div>
           <button className="logout-btn-child" onClick={handleLogout}>🚪</button>

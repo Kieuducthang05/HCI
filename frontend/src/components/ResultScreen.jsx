@@ -72,7 +72,7 @@ function ResultDialog({
         <h2 className="result-title">{title}</h2>
 
         <div className={`result-reward result-reward-${variant}`}>
-          <span className="result-reward-icon" aria-hidden="true">✪</span>
+          <span className="result-reward-icon" aria-hidden="true">★</span>
           <span>{displayReward}</span>
         </div>
 

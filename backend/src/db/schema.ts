@@ -30,6 +30,12 @@ export interface PreferencesMetadata {
   musicVolume?: number;
   highContrastEnabled?: boolean;
   reducedMotionEnabled?: boolean;
+  regulation?: {
+    method?: "breathing" | "quiet" | "music" | "parent";
+    contact?: string;
+    alertAfter?: "60" | "120";
+    quietMode?: boolean;
+  };
 }
 
 // Tables

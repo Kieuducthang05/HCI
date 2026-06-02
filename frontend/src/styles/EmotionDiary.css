@@ -405,6 +405,14 @@
   font-weight: 900;
 }
 
+.chart-box-subtitle {
+  margin: -8px 0 14px;
+  color: #717982;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
 .line-chart-container,
 .bar-chart-container {
   min-height: 230px;
@@ -413,37 +421,108 @@
     linear-gradient(#eef0f2 1px, transparent 1px),
     linear-gradient(90deg, #eef0f2 1px, transparent 1px);
   background-size: 100% 46px, 64px 100%;
+  overflow: hidden;
 }
 
 .line-chart-svg line {
   stroke: transparent;
 }
 
+.line-chart-svg .chart-grid-line {
+  stroke: rgba(123, 132, 143, 0.22);
+}
+
+.line-chart-svg .chart-axis-line {
+  stroke: rgba(32, 34, 38, 0.28);
+}
+
 .line-chart-svg polyline {
   stroke: #4ba3f4;
+}
+
+.chart-axis-title,
+.chart-tick-label,
+.chart-day-label,
+.trend-point-label {
+  fill: #6e747c;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.chart-tick-label {
+  text-anchor: end;
+}
+
+.chart-day-label,
+.trend-point-label,
+.chart-axis-bottom {
+  text-anchor: middle;
+}
+
+.trend-point {
+  fill: #ffffff;
+  stroke: #4ba3f4;
+  stroke-width: 3px;
+}
+
+.chart-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: #6e747c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.trend-swatch {
+  width: 22px;
+  height: 4px;
+  border-radius: 999px;
+  background: #4ba3f4;
 }
 
 .bars-grid {
   height: 205px;
   background: transparent;
+  overflow: hidden;
 }
 
 .bar-column .bar {
   width: 9px;
   border-radius: 4px 4px 0 0;
-  background: #f2c464 !important;
+  background: #f2c464;
 }
 
 .bar-count {
-  display: none;
+  display: block;
+  color: #5d6670;
+  font-size: 12px;
+  font-weight: 850;
 }
 
 .emotion-logs-section {
   padding: 24px 30px;
 }
 
+.logs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
 .logs-title {
-  margin-bottom: 22px;
+  margin-bottom: 0;
+}
+
+.logs-count {
+  color: #8a9098;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .emotion-logs-list {
@@ -484,6 +563,26 @@
 
 .log-time {
   color: #5d6670;
+}
+
+.logs-toggle-btn {
+  display: block;
+  margin: 18px auto 0;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid #e7e4dd;
+  border-radius: 999px;
+  background: #f7f5f1;
+  color: #2f63b7;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.logs-toggle-btn:hover {
+  background: #eef3ff;
+  border-color: #d8e2fb;
 }
 
 @media (max-width: 900px) {

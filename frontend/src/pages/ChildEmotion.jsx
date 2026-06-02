@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { getSelectedChild, trackingApi } from '../services/api'
 import { captureDetectedFace } from '../utils/faceCapture'
 import '../styles/Child.css'
@@ -113,7 +112,6 @@ async function captureVideoFrame(video) {
 }
 
 export default function ChildEmotion() {
-  const navigate = useNavigate()
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [selectedEmotion, setSelectedEmotion] = useState(emotions[0])
@@ -248,7 +246,6 @@ export default function ChildEmotion() {
           <h2>Luyện biểu cảm</h2>
           <p>Chọn cảm xúc mục tiêu, thể hiện trước camera và để hệ thống kiểm tra đúng hay chưa.</p>
         </div>
-        <button className="close-btn" onClick={() => navigate('/child/home')}>×</button>
       </div>
 
       <section className="emotion-picker-panel">

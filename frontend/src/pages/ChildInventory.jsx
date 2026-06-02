@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useOutletContext } from 'react-router-dom'
+import { useOutletContext } from 'react-router-dom'
 import { getSelectedChild, petsApi } from '../services/api'
 import '../styles/Child.css'
 
@@ -23,7 +23,6 @@ function normalizeChildPet(childPet) {
 }
 
 export default function ChildInventory() {
-  const navigate = useNavigate()
   const { userStars } = useOutletContext()
   const selectedChild = getSelectedChild()
   const [childPets, setChildPets] = useState([])
@@ -84,7 +83,6 @@ export default function ChildInventory() {
           <h2>🎒 Kho vật phẩm</h2>
           <p>Những pet và vật phẩm ba mẹ đã đổi sao cho bé.</p>
         </div>
-        <button className="close-btn" onClick={() => navigate('/child/home')} aria-label="Về trang chủ">×</button>
       </div>
 
       <div className="inventory-stats">
