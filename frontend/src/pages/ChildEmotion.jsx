@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getSelectedChild, trackingApi } from '../services/api'
+import { getSelectedChild, trackingApi, visionApi } from '../services/api'
 import '../styles/Child.css'
 
 const emotions = [
@@ -226,13 +226,15 @@ export default function ChildEmotion() {
 
       const targetEmotion = selectedEmotion
       const frame = await captureVideoFrame(videoRef.current)
-      const result = await trackingApi.predictEmotion(child.id, frame, {
-        targetEmotion: targetEmotion.modelEmotion,
-      })
-      const prediction = result.prediction
+
+      // 1. Gọi trực tiếp Computer Vision Service (Port 9000)
+      const visionResult = await visionApi.predict(frame)
+      const prediction = visionResult.prediction || visionResult
+      
       const detectedEmotion = getModelEmotionInfo(prediction.emotion)
       const confidence = Number(prediction.confidence || 0)
       const expressionCheck = prediction.expression_check
+      
       const isCorrect = typeof expressionCheck?.is_correct === 'boolean'
         ? expressionCheck.is_correct
         : detectedEmotion.uiId === targetEmotion.id
@@ -251,7 +253,23 @@ export default function ChildEmotion() {
           : `Chưa đúng. Mục tiêu là "${targetEmotion.label}", model đang thấy gần với "${detectedEmotion.label}".`
       })
 
-      setSaveMessage(result.log ? 'Đã kiểm tra biểu cảm và lưu kết quả vào nhật ký.' : '')
+      // 2. Gửi kết quả đã nhận diện về Backend (Port 5050) để lưu log
+      const logResult = await trackingApi.recordEmotionLog(child.id, {
+        trigger_source: 'WEBCAM',
+        ai_result: {
+          emotion: prediction.emotion,
+          confidence: confidence,
+          all_scores: prediction.all_scores || {}
+        },
+        metadata: {
+          source: 'child-emotion-page',
+          ui_label: detectedEmotion.label,
+          target_emotion: targetEmotion.id,
+          is_correct: isCorrect
+        }
+      })
+
+      setSaveMessage(logResult.log ? 'Đã kiểm tra biểu cảm và lưu kết quả vào nhật ký.' : '')
     } catch (error) {
       setCameraError(error.message || 'Không gửi được ảnh đến mô hình cảm xúc.')
     } finally {

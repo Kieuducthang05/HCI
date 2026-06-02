@@ -761,18 +761,18 @@
 .parent-icon-circle {
   width: 80px;
   height: 80px;
-  border-radius: 20px;
-  background: #EEF2FF;
+  border-radius: 50%;
+  background: #d8e2ff;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 24px;
-  color: #4F46E5;
+  color: #295aa9;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .profile-card:hover .parent-icon-circle {
-  background: #4F46E5;
+  background: #295aa9;
   color: white;
   transform: rotate(5deg) scale(1.1);
 }
@@ -784,7 +784,7 @@
 
 /* Child Card (Has Profile) */
 .child-card-active {
-  background: #F0FDF4;
+  background: #e6ecff;
   border: none;
 }
 
@@ -881,5 +881,3 @@
     min-height: 200px;
   }
 }
-
-

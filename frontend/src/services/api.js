@@ -128,6 +128,40 @@ export async function chatbotRequest(path, options = {}) {
   return data
 }
 
+export async function visionRequest(path, options = {}) {
+  const { body, headers, ...rest } = options
+  const isFormData = body instanceof FormData
+
+  const response = await fetch(`${VISION_BASE_URL}${path}`, {
+    ...rest,
+    headers: {
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(headers || {}),
+    },
+    body: body === undefined || isFormData ? body : JSON.stringify(body),
+  })
+
+  const data = await parseResponse(response)
+
+  if (!response.ok) {
+    throw new ApiError(data?.detail || 'Không thể kết nối dịch vụ thị giác máy tính.', response.status)
+  }
+
+  return data
+}
+
+export const visionApi = {
+  health: () => visionRequest('/health'),
+  predict: (file) => {
+    const formData = new FormData()
+    formData.append('file', file, file.name || 'camera-frame.jpg')
+    return visionRequest('/model/predict', {
+      method: 'POST',
+      body: formData,
+    })
+  },
+}
+
 export const chatbotApi = {
   health: () => chatbotRequest('/health'),
   chat: ({ message, history = [], conversationSummary = '', childProfile = null }) => chatbotRequest('/chat', {
@@ -209,18 +243,6 @@ export const preferencesApi = {
 export const trackingApi = {
   dashboard: (childId, days = 7) => apiRequest(`/children/${childId}/dashboard`, { query: { days } }),
   listEmotionLogs: (childId, query) => apiRequest(`/children/${childId}/emotion-logs`, { query }),
-  predictEmotion: (childId, file, options = {}) => {
-    const formData = new FormData()
-    formData.append('file', file, file.name || 'camera-frame.jpg')
-    if (options.targetEmotion) {
-      formData.append('target_emotion', options.targetEmotion)
-    }
-
-    return apiRequest(`/children/${childId}/emotion-predictions`, {
-      method: 'POST',
-      body: formData,
-    })
-  },
   recordEmotionLog: (childId, payload) => apiRequest(`/children/${childId}/emotion-logs`, {
     method: 'POST',
     body: payload,
@@ -253,11 +275,16 @@ export const petsApi = {
     method: 'POST',
     body: { pet_id: petId, custom_name: customName },
   }),
+  rename: (childId, childPetId, customName) => apiRequest(`/children/${childId}/pets/${childPetId}`, {
+    method: 'PATCH',
+    body: { custom_name: customName },
+  }),
 }
 
 export const adminApi = {
   analytics: (query) => apiRequest('/admin/analytics', { query }),
   listContents: (query) => apiRequest('/admin/contents', { query }),
+  getContentDetail: (contentId) => apiRequest(`/admin/contents/${contentId}`),
   createContent: (payload) => apiRequest('/admin/contents', {
     method: 'POST',
     body: payload,

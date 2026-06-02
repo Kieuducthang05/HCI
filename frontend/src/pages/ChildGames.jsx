@@ -1,13 +1,40 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
-import { contentApi, getSelectedChild, setSelectedChild } from '../services/api'
+import { contentApi, getSelectedChild, setSelectedChild, visionApi } from '../services/api'
 import '../styles/Child.css'
+
+// Helper to capture video frame
+function captureVideoFrame(video) {
+  return new Promise((resolve, reject) => {
+    if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+      reject(new Error('Camera chưa sẵn sàng.'))
+      return
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const context = canvas.getContext('2d')
+    if (!context) {
+      reject(new Error('Không hỗ trợ canvas.'))
+      return
+    }
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error('Lỗi chụp ảnh.'))
+        return
+      }
+      resolve(new File([blob], `game-frame-${Date.now()}.jpg`, { type: 'image/jpeg' }))
+    }, 'image/jpeg', 0.9)
+  })
+}
 
 const gameContentKeys = {
   chooseEmotion: ['choose-emotion-happy', 'choose-emotion-sad', 'choose-emotion-calm'],
   chooseReaction: ['choose-reaction-help', 'choose-reaction-thanks', 'choose-reaction-support'],
   matchEmotion: ['match-emotion-play', 'match-emotion-lost-toy', 'match-emotion-boundary'],
+  emotionImitation: ['imitate-happy', 'imitate-sad', 'imitate-angry'],
 }
 
 const gameContentFallback = {
@@ -133,13 +160,44 @@ const matchEmotionGames = [
   },
 ]
 
+const emotionImitationGames = [
+  {
+    targetEmotion: 'HAPPY',
+    label: 'Vui vẻ',
+    emoji: '😊',
+    instruction: 'Con hãy cười thật tươi giống bạn nhỏ này nhé!',
+    explanation: 'Con đã làm rất tốt! Nụ cười của con rất đẹp.',
+  },
+  {
+    targetEmotion: 'SAD',
+    label: 'Buồn',
+    emoji: '😢',
+    instruction: 'Con hãy thử làm khuôn mặt buồn một chút nhé.',
+    explanation: 'Đúng rồi, đó là khuôn mặt khi chúng ta thấy buồn.',
+  },
+  {
+    targetEmotion: 'ANGRY',
+    label: 'Tức giận',
+    emoji: '😡',
+    instruction: 'Con hãy thử làm khuôn mặt tức giận xem nào!',
+    explanation: 'Chính xác! Đó là biểu cảm khi chúng ta thấy giận dữ.',
+  },
+]
+
 const games = {
   chooseEmotion: chooseEmotionGames,
   chooseReaction: chooseReactionGames,
   matchEmotion: matchEmotionGames,
+  emotionImitation: emotionImitationGames,
 }
 
 const gameOptions = [
+  {
+    id: 'emotionImitation',
+    title: '🎭 Bắt chước cảm xúc',
+    description: 'Sử dụng camera để bắt chước các biểu cảm',
+    icon: '📸',
+  },
   {
     id: 'chooseEmotion',
     title: '🎯 Chọn cảm xúc đúng',
@@ -164,6 +222,8 @@ export default function ChildGames() {
   const navigate = useNavigate()
   const { setUserStars } = useOutletContext()
   const selectedChild = getSelectedChild()
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
   const [currentGame, setCurrentGame] = useState(null)
   const [score, setScore] = useState(0)
   const [gameIndex, setGameIndex] = useState(0)
@@ -171,6 +231,36 @@ export default function ChildGames() {
   const [gameContents, setGameContents] = useState([])
   const [contentError, setContentError] = useState('')
   const [sessionStartTime, setSessionStartTime] = useState(null)
+  const [isCameraOn, setIsCameraOn] = useState(false)
+  const [isScanning, setIsScanning] = useState(false)
+  const [cameraError, setCameraError] = useState('')
+
+  useEffect(() => {
+    return () => {
+      stopCamera()
+    }
+  }, [])
+
+  const startCamera = async () => {
+    setCameraError('')
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+      }
+      setIsCameraOn(true)
+    } catch (err) {
+      setCameraError('Không thể mở camera. Hãy kiểm tra quyền truy cập.')
+    }
+  }
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach(track => track.stop())
+    streamRef.current = null
+    if (videoRef.current) videoRef.current.srcObject = null
+    setIsCameraOn(false)
+  }
 
   useEffect(() => {
     if (!selectedChild?.id) {
@@ -329,11 +419,34 @@ export default function ChildGames() {
     if (isLastQuestion) {
       setScore(scoreAfterAnswer)
       setGameIndex(games[currentGame].length)
+      if (currentGame === 'emotionImitation') stopCamera()
       return
     }
 
     setGameIndex((index) => index + 1)
     setSessionStartTime(nowMs())
+  }
+
+  const checkImitation = async () => {
+    if (!isCameraOn || isScanning) return
+    setIsScanning(true)
+    setCameraError('')
+
+    try {
+      const frame = await captureVideoFrame(videoRef.current)
+      const visionResult = await visionApi.predict(frame)
+      const prediction = visionResult.prediction || visionResult
+      
+      const target = currentGameData.targetEmotion
+      const detected = prediction.emotion?.toUpperCase()
+      const isCorrect = detected === target.toUpperCase()
+
+      await handleGameAnswer(isCorrect, detected)
+    } catch (err) {
+      setCameraError(err.message || 'Lỗi nhận diện cảm xúc.')
+    } finally {
+      setIsScanning(false)
+    }
   }
 
   if (!currentGame) {
@@ -407,6 +520,42 @@ export default function ChildGames() {
           <div className="complete-buttons">
             <button className="play-again-btn" onClick={() => startGame(currentGame)}>Chơi lại</button>
             <button className="go-menu-btn" onClick={backToMenu}>Quay lại menu</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentGame === 'emotionImitation') {
+    return (
+      <div className="imitation-game">
+        {feedbackOverlay}
+        <div className="game-header">
+          <button className="game-back" onClick={() => { backToMenu(); stopCamera(); }}>←</button>
+          <div className="game-score">⭐ {score}</div>
+        </div>
+
+        <div className="imitation-content">
+          <div className="target-card">
+            <span className="target-emoji">{currentGameData.emoji}</span>
+            <h3>{currentGameData.label}</h3>
+            <p>{currentGameData.instruction}</p>
+          </div>
+
+          <div className="camera-view">
+            <video ref={videoRef} autoPlay playsInline muted className={isCameraOn ? '' : 'hidden'} />
+            {!isCameraOn && (
+              <div className="camera-placeholder">
+                <button className="start-cam-btn" onClick={startCamera}>Bật Camera</button>
+              </div>
+            )}
+          </div>
+
+          <div className="camera-controls">
+            <button className="action-btn" onClick={checkImitation} disabled={!isCameraOn || isScanning}>
+              {isScanning ? 'Đang kiểm tra...' : 'Kiểm tra biểu cảm'}
+            </button>
+            {cameraError && <p className="error-text">{cameraError}</p>}
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Outlet, useLocation } from 'react-router-dom'
+import { FiHome, FiSmile, FiUser, FiPackage, FiLogOut, FiStar } from 'react-icons/fi'
 import { childrenApi, getSelectedChild, setSelectedChild } from '../services/api'
 import '../styles/Child.css'
 
@@ -9,6 +10,7 @@ export default function ChildLayout() {
   const selectedChild = getSelectedChild()
   const [userStars, setUserStars] = useState(selectedChild?.total_stars || 0)
   const activeMenu = location.pathname.split('/')[2] || 'home'
+  const showTopbar = activeMenu !== 'chat'
 
   useEffect(() => {
     const child = getSelectedChild()
@@ -26,14 +28,13 @@ export default function ChildLayout() {
   }, [])
 
   const menuItems = [
-    { id: 'home', label: 'Trang chủ', icon: '🏠' },
-    { id: 'emotion', label: 'Cảm xúc', icon: '💬' },
-    { id: 'avatar', label: 'Avatar', icon: '👤' },
-    { id: 'inventory', label: 'Kho', icon: '🎒' }
+    { id: 'home', label: 'Trang chủ', icon: <FiHome /> },
+    { id: 'emotion', label: 'Cảm xúc', icon: <FiSmile /> },
+    { id: 'avatar', label: 'Avatar', icon: <FiUser /> },
+    { id: 'inventory', label: 'Kho', icon: <FiPackage /> }
   ]
 
   const handleMenuClick = (menuId) => {
-    // Sửa ở đây: Đã thêm lệnh navigate tự động theo ID của mọi nút
     navigate(`/child/${menuId}`)
   }
 
@@ -44,7 +45,8 @@ export default function ChildLayout() {
   return (
     <div className="child-container">
       {/* Top Bar with Stars */}
-      <div className="child-topbar">
+      {showTopbar && (
+        <div className="child-topbar">
         <div className="topbar-left">
           <button className="back-btn" onClick={() => navigate(-1)}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -67,12 +69,15 @@ export default function ChildLayout() {
         </nav>
         <div className="topbar-right">
           <div className="star-display">
-            <span className="star-icon">⭐</span>
+            <span className="star-icon"><FiStar /></span>
             <span className="star-count">{userStars}</span>
           </div>
-          <button className="logout-btn-child" onClick={handleLogout}>🚪</button>
+          <button className="logout-btn-child" onClick={handleLogout}>
+            <FiLogOut />
+          </button>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="child-main-content">
