@@ -139,6 +139,11 @@ export default function ParentHome() {
 
   return (
     <div className="parent-home">
+      <div className="notification-banner milestone-banner">
+        <span>★</span>
+        <span>Bé {currentChild.nickname} đang có {(dashboard?.child?.total_stars ?? currentChild.total_stars ?? 0).toLocaleString()} sao. Hãy vào cửa hàng để đổi vật phẩm mới thưởng cho bé!</span>
+      </div>
+
       {error && (
         <div className="notification-banner">
           <span>!</span>
@@ -165,8 +170,12 @@ export default function ParentHome() {
         <div className="stat-card stars-card">
           <div className="star-icon">⭐</div>
           <div className="stat-content">
+            <div className="stat-kicker">Tháng này</div>
             <div className="stat-label">Tổng số sao</div>
-            <div className="stat-value">{(dashboard?.child?.total_stars ?? currentChild.total_stars ?? 0).toLocaleString()}</div>
+            <div className="stat-value">
+              {(dashboard?.child?.total_stars ?? currentChild.total_stars ?? 0).toLocaleString()}
+              <span className="stat-percentage">+12%</span>
+            </div>
             <div className="stat-bar">
               <div className="bar-fill" style={{ width: `${Math.min((dashboard?.child?.total_stars || 0) / 10, 100)}%` }}></div>
             </div>
@@ -175,24 +184,13 @@ export default function ParentHome() {
 
         <div className="stat-card zone-card">
           <div className="zone-content">
-            <div className="stat-label">Phiên học hoàn thành</div>
-            <div className="stat-value">{dashboard?.learning?.completed_sessions || 0}</div>
+            <div className="stat-label">Thời gian trong Zone</div>
+            <div className="stat-value">{dashboard?.learning?.completed_sessions || 0}<span className="stat-unit">giờ</span></div>
             <div className="zone-progress">
-              <div className="progress-circle" style={{ width: '40px', height: '40px' }}>
-                <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%' }}>
-                  <circle cx="18" cy="18" r="16" fill="none" stroke="#e5e7eb" strokeWidth="2" />
-                  <circle
-                    cx="18"
-                    cy="18"
-                    r="16"
-                    fill="none"
-                    stroke="#93c5fd"
-                    strokeWidth="2"
-                    strokeDasharray={`${dashboard?.learning?.success_rate || 0} 100`}
-                    transform="rotate(-90 18 18)"
-                  />
-                </svg>
-              </div>
+              <span></span>
+              <span></span>
+              <span></span>
+              <strong>+3</strong>
             </div>
           </div>
         </div>
@@ -221,21 +219,17 @@ export default function ParentHome() {
         <div className="chart-container">
           <div className="bars-container">
             {weeklyData.map((data) => (
-              <div key={data.day} className="bar-group">
-                <div className="bars-set">
-                  <div className="bar calm" style={{ height: `${data.calm}px` }}></div>
-                  <div className="bar happy" style={{ height: `${data.happy}px` }}></div>
-                  <div className="bar sad" style={{ height: `${data.sad}px` }}></div>
-                </div>
+          <div key={data.day} className="bar-group">
+                <div className={`weekly-bar ${data.day === 'T4' ? 'active' : ''}`} style={{ height: `${Math.max(72, data.calm + data.happy / 2)}px` }}></div>
                 <div className="bar-label">{data.day}</div>
               </div>
             ))}
           </div>
 
           <div className="chart-legend">
-            <div className="legend-item"><span className="legend-dot calm"></span><span>Bình tĩnh</span></div>
-            <div className="legend-item"><span className="legend-dot happy"></span><span>Vui vẻ</span></div>
-            <div className="legend-item"><span className="legend-dot sad"></span><span>Tiêu cực</span></div>
+            <div className="legend-item"><span className="legend-dot calm"></span><span>Học tập</span></div>
+            <div className="legend-item"><span className="legend-dot happy"></span><span>Nghỉ ngơi</span></div>
+            <div className="legend-item"><span className="legend-dot sad"></span><span>Sáng tạo</span></div>
           </div>
         </div>
       </div>

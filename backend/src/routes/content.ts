@@ -42,10 +42,35 @@ async function resolveMediaUrl(value: string | null): Promise<string | null> {
   return await getFileUrl(value, 3600);
 }
 
+async function resolveConfigMedia(value: unknown): Promise<unknown> {
+  if (Array.isArray(value)) {
+    return await Promise.all(value.map((item) => resolveConfigMedia(item)));
+  }
+
+  if (!value || typeof value !== "object") return value;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    if (
+      typeof item === "string" &&
+      ["imageUrl", "promptImageUrl", "src"].includes(key)
+    ) {
+      result[key] = await resolveMediaUrl(item);
+    } else {
+      result[key] = await resolveConfigMedia(item);
+    }
+  }
+
+  return result;
+}
+
 async function formatContent(content: ContentResult) {
   const lectureMediaUrl = await resolveMediaUrl(content.lecture?.mediaUrl ?? null);
   const quizMediaUrl = await resolveMediaUrl(content.quiz?.mediaUrl ?? null);
   const gamePromptAssetUrl = await resolveMediaUrl(content.game?.promptAssetUrl ?? null);
+  const gameConfig = content.game
+    ? await resolveConfigMedia(content.game.config ?? {})
+    : {};
 
   return {
     id: content.id,
@@ -100,6 +125,7 @@ async function formatContent(content: ContentResult) {
           unlock_star_cost: content.game.unlockStarCost,
           prompt_asset_type: content.game.promptAssetType,
           prompt_asset_url: gamePromptAssetUrl,
+          config: gameConfig,
         }
       : null,
   };

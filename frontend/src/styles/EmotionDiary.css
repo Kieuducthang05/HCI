@@ -289,3 +289,218 @@
     min-width: 60px;
   }
 }
+
+/* ===== PARENT MOCKUP REFRESH ===== */
+.emotion-diary-container {
+  width: min(100%, 1060px);
+  max-width: none;
+}
+
+.emotion-header {
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.emotion-title {
+  color: #202226;
+  font-size: 31px;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.emotion-subtitle {
+  color: #6e747c;
+  font-size: 15px;
+}
+
+.emotion-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.emotion-header-actions .text-input {
+  min-height: 46px;
+  border: 1px solid #ebe8e2;
+  border-radius: 999px;
+  padding: 0 16px;
+  background: #ffffff;
+  color: #202226;
+  font-weight: 800;
+}
+
+.emotion-export-btn {
+  min-width: 112px;
+  min-height: 46px;
+  border-radius: 999px;
+  background: #2f63b7;
+  font-weight: 900;
+}
+
+.emotion-stats-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px;
+  margin-bottom: 18px;
+}
+
+.emotion-stat-card,
+.emotion-chart-box,
+.emotion-logs-section {
+  border: 1px solid #ebe8e2;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 14px 26px rgba(32, 34, 38, 0.04);
+}
+
+.emotion-stat-card {
+  min-height: 104px;
+  padding: 18px;
+}
+
+.stat-icon {
+  display: none;
+}
+
+.emotion-stat-card .stat-info {
+  display: grid;
+  gap: 4px;
+}
+
+.emotion-stat-card .stat-value {
+  order: 2;
+  color: #202226;
+  font-size: 23px;
+  font-weight: 900;
+}
+
+.emotion-stat-card .stat-label {
+  order: 1;
+  color: #8a9098;
+  font-size: 13px;
+}
+
+.emotion-stat-card .stat-change {
+  order: 3;
+  color: #7d858e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.emotion-charts-row {
+  gap: 26px;
+  margin-bottom: 22px;
+}
+
+.emotion-chart-box {
+  padding: 20px;
+}
+
+.chart-box-title,
+.logs-title {
+  margin-bottom: 16px;
+  padding-left: 0;
+  border-left: 0;
+  color: #202226;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.line-chart-container,
+.bar-chart-container {
+  min-height: 230px;
+  border-radius: 12px;
+  background:
+    linear-gradient(#eef0f2 1px, transparent 1px),
+    linear-gradient(90deg, #eef0f2 1px, transparent 1px);
+  background-size: 100% 46px, 64px 100%;
+}
+
+.line-chart-svg line {
+  stroke: transparent;
+}
+
+.line-chart-svg polyline {
+  stroke: #4ba3f4;
+}
+
+.bars-grid {
+  height: 205px;
+  background: transparent;
+}
+
+.bar-column .bar {
+  width: 9px;
+  border-radius: 4px 4px 0 0;
+  background: #f2c464 !important;
+}
+
+.bar-count {
+  display: none;
+}
+
+.emotion-logs-section {
+  padding: 24px 30px;
+}
+
+.logs-title {
+  margin-bottom: 22px;
+}
+
+.emotion-logs-list {
+  gap: 0;
+}
+
+.emotion-log-item {
+  min-height: 58px;
+  padding: 8px 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.emotion-log-item:hover {
+  background: transparent;
+}
+
+.log-emoji {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f2f1ee;
+  font-size: 20px;
+}
+
+.log-emotion-name {
+  color: #202226;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.log-description {
+  color: #6e747c;
+}
+
+.log-time {
+  color: #5d6670;
+}
+
+@media (max-width: 900px) {
+  .emotion-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .emotion-header,
+  .emotion-header-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  .emotion-stats-grid,
+  .emotion-charts-row {
+    grid-template-columns: 1fr;
+  }
+}

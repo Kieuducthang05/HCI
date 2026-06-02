@@ -291,6 +291,7 @@ CREATE TABLE IF NOT EXISTS "game" (
   "unlock_star_cost" integer DEFAULT 0 NOT NULL,
   "prompt_asset_type" text,
   "prompt_asset_url" text,
+  "config" jsonb DEFAULT '{}'::jsonb NOT NULL,
   CONSTRAINT "game_id_contents_fkey"
     FOREIGN KEY ("id") REFERENCES "contents" ("id") ON DELETE cascade,
   CONSTRAINT "game_difficulty_check"
@@ -306,7 +307,8 @@ CREATE TABLE IF NOT EXISTS "game" (
 
 ALTER TABLE "game"
   ADD COLUMN IF NOT EXISTS "prompt_asset_type" text,
-  ADD COLUMN IF NOT EXISTS "prompt_asset_url" text;
+  ADD COLUMN IF NOT EXISTS "prompt_asset_url" text,
+  ADD COLUMN IF NOT EXISTS "config" jsonb DEFAULT '{}'::jsonb NOT NULL;
 
 DO $$
 BEGIN

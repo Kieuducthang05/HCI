@@ -11,6 +11,7 @@ export default function ChildLayout() {
   const [userStars, setUserStars] = useState(selectedChild?.total_stars || 0)
   const activeMenu = location.pathname.split('/')[2] || 'home'
   const showTopbar = activeMenu !== 'chat'
+  const isPlainChildPage = ['questions', 'games'].includes(activeMenu)
 
   useEffect(() => {
     const child = getSelectedChild()
@@ -28,10 +29,15 @@ export default function ChildLayout() {
   }, [])
 
   const menuItems = [
+<<<<<<< HEAD
     { id: 'home', label: 'Trang chủ', icon: <FiHome /> },
     { id: 'emotion', label: 'Cảm xúc', icon: <FiSmile /> },
     { id: 'avatar', label: 'Avatar', icon: <FiUser /> },
     { id: 'inventory', label: 'Kho', icon: <FiPackage /> }
+=======
+    { id: 'home', label: 'Trang chủ', icon: '🏠' },
+    { id: 'inventory', label: 'Vật phẩm', icon: '💎' }
+>>>>>>> becf1ffadd0d6378390c4ddaacca0e0e00efe293
   ]
 
   const handleMenuClick = (menuId) => {
@@ -43,7 +49,7 @@ export default function ChildLayout() {
   }
 
   return (
-    <div className="child-container">
+    <div className={`child-container${isPlainChildPage ? ' child-container-plain' : ''}`}>
       {/* Top Bar with Stars */}
       {showTopbar && (
         <div className="child-topbar">

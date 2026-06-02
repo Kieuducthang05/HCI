@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate, Outlet, useLocation } from 'react-router-dom'
+import { FiBookOpen, FiGrid, FiLogOut, FiSettings, FiShoppingBag } from 'react-icons/fi'
 import '../styles/ParentDashboard.css'
 
 export default function ParentLayout() {
@@ -11,10 +12,10 @@ export default function ParentLayout() {
   }, [location.pathname])
 
   const menuItems = [
-    { id: 'home', label: 'Trang chủ', icon: '🏠' },
-    { id: 'emotion-diary', label: 'Nhật kỳ cảm xúc', icon: '📔' },
-    { id: 'settings', label: 'Cài đặt', icon: '⚙️' },
-    { id: 'shop', label: 'Cửa hàng sao', icon: '🛍️' }
+    { id: 'home', label: 'Trang chủ', icon: <FiGrid aria-hidden="true" /> },
+    { id: 'emotion-diary', label: 'Nhật ký cảm xúc', icon: <FiBookOpen aria-hidden="true" /> },
+    { id: 'settings', label: 'Cài đặt', icon: <FiSettings aria-hidden="true" /> },
+    { id: 'shop', label: 'Cửa hàng sao', icon: <FiShoppingBag aria-hidden="true" /> }
   ]
 
   const handleMenuClick = (menuId) => {
@@ -49,7 +50,7 @@ export default function ParentLayout() {
 
         <div className="sidebar-footer">
           <button className="logout-btn" onClick={handleLogout}>
-            <span>🚪</span> Đăng xuất
+            <FiLogOut aria-hidden="true" /> Đăng xuất
           </button>
         </div>
       </aside>

@@ -222,7 +222,12 @@ export const childrenApi = {
   update: (childId, payload) => {
     const formData = new FormData()
     Object.entries(payload).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) formData.append(key, String(value))
+      if (value === undefined || value === null) return
+      if (value instanceof File) {
+        formData.append(key, value, value.name)
+        return
+      }
+      formData.append(key, String(value))
     })
     return apiRequest(`/children/${childId}`, { method: 'PATCH', body: formData })
   },

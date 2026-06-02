@@ -1,74 +1,147 @@
 import '../styles/ResultScreen.css'
 
-// Correct Answer Result Screen
-export function CorrectAnswer({
-  emotion,
-  score,
+const resultCopy = {
+  question: {
+    success: 'Hoan hô! Chúc mừng bé đã hoàn thành câu hỏi',
+    incorrect: 'Cố lên! Bé đã học thêm từ câu hỏi này',
+  },
+  lesson: {
+    success: 'Hoan hô! Chúc mừng bé đã hoàn thành bài học',
+    incorrect: 'Cố lên! Bé đã học thêm từ bài học này',
+  },
+  game: {
+    success: 'Hoan hô! Chúc mừng bé đã hoàn thành trò chơi',
+    incorrect: 'Cố lên! Bé đã học thêm từ trò chơi này',
+  },
+}
+
+function formatReward(reward, fallback) {
+  if (fallback) return fallback
+  if (typeof reward === 'number') return reward > 0 ? `+${reward} Sao` : 'Đã hoàn thành'
+  if (typeof reward === 'string' && reward.trim()) return reward
+  return null
+}
+
+function cleanContinueLabel(label) {
+  return String(label || 'Tiếp tục').replace(/\s*→\s*$/, '')
+}
+
+function ResultDialog({
+  variant,
+  resultType = 'question',
+  title,
+  bannerText,
+  reward,
+  rewardLabel,
+  messages = [],
+  explanation,
+  encouragement,
   onContinue,
-  title = 'Hoàn thành xuất sắc!',
   continueLabel = 'Tiếp tục →',
-  messages = ['⭐ Bé trả lời rất chính xác!', '🎉 Hãy tiếp tục nỗ lực nhé!']
 }) {
+  const isIncorrect = variant === 'incorrect'
+  const copy = resultCopy[resultType] || resultCopy.question
+  const displayBanner = bannerText || copy[variant]
+  const displayReward = formatReward(reward, rewardLabel) || (isIncorrect ? 'Chưa nhận sao' : 'Đã hoàn thành')
+  const messageLines = Array.isArray(messages) ? messages : [messages]
+  const detailLines = [
+    explanation,
+    encouragement,
+    ...messageLines,
+  ].filter(Boolean)
+
   return (
-    <div className="result-overlay">
-      <div className="result-card correct-result">
-        <div className="achievement-badge">
-          <span className="medal-icon">🏅</span>
+    <div className={`result-overlay result-overlay-${variant}`} role="dialog" aria-modal="true">
+      <div className="result-rocket" aria-hidden="true">🚀</div>
+      <div className="result-sparkles" aria-hidden="true">
+        <span>✦</span>
+        <span>✦</span>
+        <span>✦</span>
+      </div>
+
+      <div className={`result-banner result-banner-${variant}`}>
+        <span className="result-banner-icon" aria-hidden="true">{isIncorrect ? '!' : '✦'}</span>
+        <span>{displayBanner}</span>
+      </div>
+
+      <div className={`result-card ${isIncorrect ? 'incorrect-result' : 'correct-result'}`}>
+        <div className={`result-medallion result-medallion-${variant}`} aria-hidden="true">
+          {isIncorrect ? '!' : '★'}
         </div>
-        
-        <h2 className="result-title correct-title">{title}</h2>
-        <p className="emotion-name">Cảm xúc: {emotion}</p>
-        
-        {score !== undefined && (
-          <p className="score-display">Điểm: {score}</p>
+
+        <h2 className="result-title">{title}</h2>
+
+        <div className={`result-reward result-reward-${variant}`}>
+          <span className="result-reward-icon" aria-hidden="true">✪</span>
+          <span>{displayReward}</span>
+        </div>
+
+        {detailLines.length > 0 && (
+          <div className="result-details">
+            {detailLines.map((line, index) => (
+              <p key={`${index}-${line}`}>{line}</p>
+            ))}
+          </div>
         )}
-        
-        <div className="achievement-message">
-          {messages.map((message) => (
-            <p key={message}>{message}</p>
-          ))}
-        </div>
-        
-        <button className="continue-btn success-btn" onClick={onContinue}>
-          {continueLabel}
+
+        <button className="result-continue-btn" onClick={onContinue}>
+          <span>{cleanContinueLabel(continueLabel)}</span>
+          <span aria-hidden="true">→</span>
         </button>
       </div>
     </div>
   )
 }
 
-// Incorrect Answer Result Screen
-export function IncorrectAnswer({
-  emotion,
+export function CorrectAnswer({
+  resultType = 'question',
+  reward,
+  rewardLabel,
+  score,
   onContinue,
-  explanation,
-  title = 'Hãy thử lại!',
-  continueLabel = 'Thử lại →',
-  encouragement = '✨ Lần tiếp theo bé sẽ làm tốt hơn!'
+  title = 'Hoàn thành xuất sắc!',
+  bannerText,
+  continueLabel = 'Tiếp tục →',
+  messages,
 }) {
   return (
-    <div className="result-overlay">
-      <div className="result-card incorrect-result">
-        <div className="sad-badge">
-          <span className="sad-icon">😢</span>
-        </div>
-        
-        <h2 className="result-title incorrect-title">{title}</h2>
-        <p className="emotion-name">Cảm xúc: {emotion}</p>
-        
-        <div className="explanation-box">
-          <p className="explanation-label">💡 Gợi ý:</p>
-          <p className="explanation-text">{explanation}</p>
-        </div>
-        
-        <div className="encouragement">
-          <p>{encouragement}</p>
-        </div>
-        
-        <button className="continue-btn retry-btn" onClick={onContinue}>
-          {continueLabel}
-        </button>
-      </div>
-    </div>
+    <ResultDialog
+      variant="success"
+      resultType={resultType}
+      reward={reward}
+      rewardLabel={rewardLabel || score}
+      title={title}
+      bannerText={bannerText}
+      continueLabel={continueLabel}
+      messages={messages}
+      onContinue={onContinue}
+    />
+  )
+}
+
+export function IncorrectAnswer({
+  resultType = 'question',
+  reward,
+  rewardLabel,
+  onContinue,
+  explanation,
+  title = 'Chưa đúng rồi!',
+  bannerText,
+  continueLabel = 'Tiếp tục →',
+  encouragement = 'Không sao, con đã học thêm được một điều mới.',
+}) {
+  return (
+    <ResultDialog
+      variant="incorrect"
+      resultType={resultType}
+      reward={reward}
+      rewardLabel={rewardLabel}
+      title={title}
+      bannerText={bannerText}
+      continueLabel={continueLabel}
+      explanation={explanation}
+      encouragement={encouragement}
+      onContinue={onContinue}
+    />
   )
 }

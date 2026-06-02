@@ -1,48 +1,105 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useOutletContext } from 'react-router-dom'
+import { getSelectedChild, petsApi } from '../services/api'
 import '../styles/Child.css'
+
+function activePetStorageKey(childId) {
+  return `hci.activePet.${childId}`
+}
+
+function normalizeChildPet(childPet) {
+  const pet = childPet.pet || {}
+  return {
+    id: childPet.id,
+    petId: childPet.pet_id,
+    name: childPet.custom_name || pet.name || 'Vật phẩm',
+    originalName: pet.name || 'Vật phẩm',
+    description: pet.description || 'Vật phẩm bé đã đổi bằng sao.',
+    imageUrl: pet.image_url,
+    animationUrl: pet.animation_url,
+    unlockedAt: childPet.unlocked_at,
+    cost: pet.unlock_star_cost || 0,
+  }
+}
 
 export default function ChildInventory() {
   const navigate = useNavigate()
-  const [inventory] = useState([
-    { id: 1, name: 'Mũ hồng', emoji: '🎀', category: 'accessory', count: 1 },
-    { id: 2, name: 'Bóp hình mèo', emoji: '🎁', category: 'gift', count: 2 },
-    { id: 3, name: 'Tranh vẽ', emoji: '🎨', category: 'art', count: 3 },
-    { id: 4, name: 'Sách truyện tranh', emoji: '📚', category: 'book', count: 1 },
-    { id: 5, name: 'Thẻ cao su', emoji: '🎮', category: 'collectible', count: 5 },
-  ])
-
+  const { userStars } = useOutletContext()
+  const selectedChild = getSelectedChild()
+  const [childPets, setChildPets] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [activePetId, setActivePetId] = useState(() => (
+    selectedChild?.id ? localStorage.getItem(activePetStorageKey(selectedChild.id)) || '' : ''
+  ))
+  const [loading, setLoading] = useState(Boolean(selectedChild?.id))
+  const [error, setError] = useState('')
 
-  const categories = [
-    { id: 'all', label: 'Tất cả', emoji: '📦' },
-    { id: 'accessory', label: 'Phụ kiện', emoji: '🎀' },
-    { id: 'gift', label: 'Quà tặng', emoji: '🎁' },
-    { id: 'art', label: 'Nghệ thuật', emoji: '🎨' },
-    { id: 'book', label: 'Sách', emoji: '📚' },
-    { id: 'collectible', label: 'Sưu tập', emoji: '🎮' },
-  ]
+  useEffect(() => {
+    if (!selectedChild?.id) {
+      return
+    }
+
+    let mounted = true
+    petsApi.listChildPets(selectedChild.id)
+      .then((result) => {
+        if (!mounted) return
+        setChildPets(result.child_pets || [])
+        setError('')
+      })
+      .catch((err) => {
+        if (mounted) setError(err.message || 'Không tải được kho vật phẩm.')
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [selectedChild?.id])
+
+  const inventory = useMemo(() => childPets.map(normalizeChildPet), [childPets])
 
   const filtered = selectedCategory === 'all'
     ? inventory
-    : inventory.filter(item => item.category === selectedCategory)
+    : inventory.filter((item) => selectedCategory === 'active' ? item.id === activePetId : true)
+
+  const categories = [
+    { id: 'all', label: 'Tất cả', emoji: '🎒' },
+    { id: 'active', label: 'Đang dùng', emoji: '⭐' },
+  ]
+
+  const handleUsePet = (item) => {
+    if (!selectedChild?.id) return
+    localStorage.setItem(activePetStorageKey(selectedChild.id), item.id)
+    setActivePetId(item.id)
+  }
+
+  const displayStars = userStars ?? selectedChild?.total_stars ?? 0
 
   return (
     <div className="child-inventory">
       <div className="inventory-header">
-        <h2>🎒 Kho của bé</h2>
-        <button className="close-btn" onClick={() => navigate('/child/home')}>✕</button>
+        <div>
+          <h2>🎒 Kho vật phẩm</h2>
+          <p>Những pet và vật phẩm ba mẹ đã đổi sao cho bé.</p>
+        </div>
+        <button className="close-btn" onClick={() => navigate('/child/home')} aria-label="Về trang chủ">×</button>
       </div>
 
       <div className="inventory-stats">
         <div className="stat-box">
-          <span className="stat-label">Tổng vật phẩm</span>
-          <span className="stat-value">{inventory.reduce((sum, item) => sum + item.count, 0)}</span>
+          <span className="stat-label">Vật phẩm đã có</span>
+          <span className="stat-value">{inventory.length}</span>
+        </div>
+        <div className="stat-box">
+          <span className="stat-label">Sao hiện có</span>
+          <span className="stat-value">{displayStars}</span>
         </div>
       </div>
 
       <div className="category-filters">
-        {categories.map(cat => (
+        {categories.map((cat) => (
           <button
             key={cat.id}
             className={`filter-btn ${selectedCategory === cat.id ? 'active' : ''}`}
@@ -54,20 +111,39 @@ export default function ChildInventory() {
         ))}
       </div>
 
+      {error && <p className="inventory-error">{error}</p>}
+
       <div className="inventory-grid">
-        {filtered.length > 0 ? (
-          filtered.map(item => (
-            <div key={item.id} className="inventory-item">
-              <div className="item-display">{item.emoji}</div>
-              <h4 className="item-name">{item.name}</h4>
-              <p className="item-count">x{item.count}</p>
-              <button className="use-item-btn">Dùng</button>
-            </div>
-          ))
-        ) : (
+        {loading && (
           <div className="empty-state">
-            <p>Chưa có vật phẩm trong danh mục này</p>
-              <p className="empty-text">Hãy hoàn thành những trò chơi để nhận vật phẩm!</p>
+            <p>Đang tải kho vật phẩm...</p>
+          </div>
+        )}
+
+        {!loading && filtered.length > 0 && filtered.map((item) => {
+          const isActive = item.id === activePetId
+          return (
+            <div key={item.id} className={`inventory-item ${isActive ? 'active' : ''}`}>
+              <div className="item-display">
+                {item.imageUrl ? (
+                  <img src={item.imageUrl} alt={item.name} />
+                ) : (
+                  <span>🐾</span>
+                )}
+              </div>
+              <h4 className="item-name">{item.name}</h4>
+              <p className="item-count">{item.description}</p>
+              <button className="use-item-btn" onClick={() => handleUsePet(item)} disabled={isActive}>
+                {isActive ? 'Đang dùng' : 'Dùng'}
+              </button>
+            </div>
+          )
+        })}
+
+        {!loading && filtered.length === 0 && (
+          <div className="empty-state">
+            <p>{selectedCategory === 'active' ? 'Bé chưa chọn vật phẩm đang dùng.' : 'Bé chưa có vật phẩm nào.'}</p>
+            <p className="empty-text">Ba mẹ có thể vào Cửa hàng sao để đổi pet cho bé.</p>
           </div>
         )}
       </div>

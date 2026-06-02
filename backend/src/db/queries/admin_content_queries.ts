@@ -1,4 +1,4 @@
-import { eq, and, desc, lt, ilike, type SQL, sql } from "drizzle-orm";
+import { eq, and, desc, lt, ilike, isNull, type SQL, sql } from "drizzle-orm";
 import type { DbExecutor } from "../client";
 import { contents, lectures, quizzes, game } from "../schema";
 import { randomUUID } from "crypto";
@@ -12,7 +12,7 @@ export type AdminContentListFilters = {
 };
 
 export async function listAdminContentRows(db: DbExecutor, filters: AdminContentListFilters) {
-  const conditions: SQL<unknown>[] = [];
+  const conditions: SQL<unknown>[] = [isNull(contents.deletedAt)];
 
   if (filters.type !== undefined) {
     conditions.push(eq(contents.type, filters.type));
@@ -41,7 +41,7 @@ export async function listAdminContentRows(db: DbExecutor, filters: AdminContent
 
 export async function getAdminContentDetailRow(db: DbExecutor, contentId: string) {
   return await db.query.contents.findFirst({
-    where: eq(contents.id, contentId),
+    where: and(eq(contents.id, contentId), isNull(contents.deletedAt)),
     with: {
       lecture: true,
       quiz: true,
@@ -99,11 +99,11 @@ export async function updateAdminContentRow(
         ...baseData,
         updatedAt: sql`NOW()`,
       })
-      .where(eq(contents.id, contentId));
+      .where(and(eq(contents.id, contentId), isNull(contents.deletedAt)));
   }
 
   const current = await db.query.contents.findFirst({
-    where: eq(contents.id, contentId),
+    where: and(eq(contents.id, contentId), isNull(contents.deletedAt)),
   });
   if (!current) throw new Error("Content not found.");
 
@@ -136,7 +136,7 @@ export async function softDeleteAdminContentRow(db: DbExecutor, contentId: strin
       deletedAt: sql`NOW()`,
       updatedAt: sql`NOW()`,
     })
-    .where(eq(contents.id, contentId))
+    .where(and(eq(contents.id, contentId), isNull(contents.deletedAt)))
     .returning();
 
   return deleted;

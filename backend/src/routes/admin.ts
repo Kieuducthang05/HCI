@@ -19,6 +19,7 @@ import type {
   AdminUserDetailResult,
   AdminUserResult,
 } from "../usecases/admin/users/admin_user_models.ts";
+import { getFileUrl } from "../storage/s3.ts";
 import { withApiErrorHandler } from "./api_error_handler.ts";
 import { requireAdmin } from "./middleware/rbac.ts";
 import { requireAuth } from "./middleware/require_auth.ts";
@@ -26,6 +27,58 @@ import { requireAuth } from "./middleware/require_auth.ts";
 function parseOptionalNumber(rawValue: string | undefined): number | undefined {
   if (rawValue === undefined || rawValue.trim() === "") return undefined;
   return Number(rawValue);
+}
+
+const gameConfigOptionSchema = t.Object({
+  label: t.Optional(t.String()),
+  emotion: t.Optional(t.String()),
+  value: t.Optional(t.String()),
+  imageUrl: t.Optional(t.String()),
+  src: t.Optional(t.String()),
+});
+
+const gameConfigSchema = t.Object({
+  kind: t.Optional(t.String()),
+  question: t.Optional(t.String()),
+  description: t.Optional(t.String()),
+  promptImageUrl: t.Optional(t.String()),
+  options: t.Optional(t.Array(gameConfigOptionSchema)),
+  correctIndex: t.Optional(t.Number()),
+  correctIndexes: t.Optional(t.Array(t.Number())),
+});
+
+function isUploadedMediaKey(value: string | null): value is string {
+  return Boolean(value && value.startsWith("media-assets/"));
+}
+
+async function resolveMediaUrl(value: string | null): Promise<string | null> {
+  if (!isUploadedMediaKey(value)) return value;
+  return await getFileUrl(value, 3600);
+}
+
+async function resolveConfigMedia(value: unknown): Promise<unknown> {
+  if (Array.isArray(value)) {
+    return await Promise.all(value.map((item) => resolveConfigMedia(item)));
+  }
+
+  if (!value || typeof value !== "object") return value;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof item === "string" && key === "imageUrl") {
+      result[key] = item;
+      result.previewUrl = await resolveMediaUrl(item);
+    } else if (typeof item === "string" && key === "promptImageUrl") {
+      result[key] = item;
+      result.promptPreviewUrl = await resolveMediaUrl(item);
+    } else if (typeof item === "string" && key === "src") {
+      result[key] = await resolveMediaUrl(item);
+    } else {
+      result[key] = await resolveConfigMedia(item);
+    }
+  }
+
+  return result;
 }
 
 function formatPet(pet: PetCatalogResult) {
@@ -43,7 +96,11 @@ function formatPet(pet: PetCatalogResult) {
   };
 }
 
-function formatContent(content: any) {
+async function formatContent(content: any) {
+  const gameConfig = content.game
+    ? await resolveConfigMedia(content.game.config ?? {})
+    : {};
+
   return {
     id: content.id,
     title: content.title,
@@ -82,6 +139,7 @@ function formatContent(content: any) {
           unlock_star_cost: content.game.unlockStarCost,
           prompt_asset_type: content.game.promptAssetType,
           prompt_asset_url: content.game.promptAssetUrl,
+          config: gameConfig,
         }
       : null,
   };
@@ -387,7 +445,7 @@ const protectedAdminRouter = new Elysia()
 
       set.status = 200;
       return {
-        contents: result.contents.map(formatContent),
+        contents: await Promise.all(result.contents.map(formatContent)),
         next_cursor: result.nextCursor,
       };
     },
@@ -417,7 +475,7 @@ const protectedAdminRouter = new Elysia()
       set.status = 201;
       return {
         message: "Content created successfully.",
-        content: formatContent(content),
+        content: await formatContent(content),
       };
     },
     {
@@ -452,6 +510,7 @@ const protectedAdminRouter = new Elysia()
             unlockStarCost: t.Optional(t.Number()),
             promptAssetType: t.Optional(t.Union([t.String(), t.Null()])),
             promptAssetUrl: t.Optional(t.Union([t.String(), t.Null()])),
+            config: t.Optional(t.Union([gameConfigSchema, t.Null()])),
           })
         ),
       }),
@@ -467,7 +526,7 @@ const protectedAdminRouter = new Elysia()
 
       set.status = 200;
       return {
-        content: formatContent(content),
+        content: await formatContent(content),
       };
     },
     {
@@ -492,7 +551,7 @@ const protectedAdminRouter = new Elysia()
       set.status = 200;
       return {
         message: "Content updated successfully.",
-        content: formatContent(content),
+        content: await formatContent(content),
       };
     },
     {
@@ -529,6 +588,7 @@ const protectedAdminRouter = new Elysia()
             unlockStarCost: t.Optional(t.Number()),
             promptAssetType: t.Optional(t.Union([t.String(), t.Null()])),
             promptAssetUrl: t.Optional(t.Union([t.String(), t.Null()])),
+            config: t.Optional(t.Union([gameConfigSchema, t.Null()])),
           })
         ),
       }),

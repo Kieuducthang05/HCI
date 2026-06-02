@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getSelectedChild, trackingApi, visionApi } from '../services/api'
+import { getSelectedChild, trackingApi } from '../services/api'
+import { captureDetectedFace } from '../utils/faceCapture'
 import '../styles/Child.css'
 
 const emotions = [
@@ -101,33 +102,14 @@ function getModelEmotionInfo(value) {
   }
 }
 
-function captureVideoFrame(video) {
-  return new Promise((resolve, reject) => {
-    if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
-      reject(new Error('Camera chưa sẵn sàng để chụp ảnh.'))
-      return
-    }
+async function captureVideoFrame(video) {
+  const captured = await captureDetectedFace(video, { filenamePrefix: 'emotion-tool-face' })
 
-    const canvas = document.createElement('canvas')
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    const context = canvas.getContext('2d')
+  if (!captured.ok) {
+    throw new Error(captured.message)
+  }
 
-    if (!context) {
-      reject(new Error('Trình duyệt không hỗ trợ chụp ảnh từ camera.'))
-      return
-    }
-
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        reject(new Error('Không tạo được ảnh từ camera.'))
-        return
-      }
-
-      resolve(new File([blob], `camera-frame-${Date.now()}.jpg`, { type: 'image/jpeg' }))
-    }, 'image/jpeg', 0.9)
-  })
+  return captured.file
 }
 
 export default function ChildEmotion() {
@@ -329,6 +311,7 @@ export default function ChildEmotion() {
               playsInline
               muted
             />
+            {isCameraOn && <div className="camera-face-guide" aria-hidden="true"></div>}
             {!isCameraOn && (
               <div className="camera-placeholder">
                 <span>📷</span>
