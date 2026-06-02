@@ -3,7 +3,6 @@ import ToastNotification from '../components/ToastNotification'
 import {
   authApi,
   childrenApi,
-  preferencesApi,
   getSelectedChild,
   getSession,
   setSession,
@@ -48,13 +47,6 @@ export default function ParentSettings() {
   const [newChildAvatarPreview, setNewChildAvatarPreview] = useState('')
   const [avatarUploadingId, setAvatarUploadingId] = useState('')
 
-  const [regulationConfig, setRegulationConfig] = useState({
-    method: 'breathing',
-    contact: 'Mẹ',
-    alertAfter: '60',
-    quietMode: true,
-  })
-
   useEffect(() => {
     if (!toast) return undefined
     const timer = setTimeout(() => setToast(null), 3200)
@@ -84,11 +76,6 @@ export default function ParentSettings() {
         setFormData(info)
         setChildren(childList)
         setSelectedChild(childList[0] || null)
-
-        const preferences = childList[0]?.preferences?.preferences
-        if (preferences?.regulation) {
-          setRegulationConfig((prev) => ({ ...prev, ...preferences.regulation }))
-        }
       })
       .catch((err) => {
         if (mounted) {
@@ -184,46 +171,6 @@ export default function ParentSettings() {
         type: 'error',
         title: 'Không thể cập nhật',
         message: err.message || 'Vui lòng kiểm tra lại mật khẩu.',
-      })
-    }
-  }
-
-  const handleRegulationChange = (e) => {
-    const { name, value, type, checked } = e.target
-    setRegulationConfig((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }))
-  }
-
-  const handleSaveRegulation = async () => {
-    const child = children[0]
-    if (!child?.id) {
-      setToast({
-        type: 'error',
-        title: 'Chưa có tài khoản trẻ',
-        message: 'Hãy tạo tài khoản trẻ trước khi lưu thiết lập.',
-      })
-      return
-    }
-
-    try {
-      await preferencesApi.update(child.id, {
-        is_high_contrast: false,
-        preferences: {
-          regulation: regulationConfig,
-        },
-      })
-      setToast({
-        type: 'success',
-        title: 'Đã lưu thiết lập',
-        message: 'Cấu hình điều hoà cảm xúc của trẻ đã được cập nhật.',
-      })
-    } catch (err) {
-      setToast({
-        type: 'error',
-        title: 'Không thể lưu',
-        message: err.message || 'Vui lòng thử lại.',
       })
     }
   }
@@ -464,46 +411,6 @@ export default function ParentSettings() {
           <div className="action-button">
             <button className="btn btn-primary" onClick={handleUpdatePassword}>Cập nhật</button>
           </div>
-        </div>
-      </section>
-
-      <section className="settings-section">
-        <div className="section-header">
-          <h2 className="section-title">Thiết lập điều hoà cảm xúc</h2>
-        </div>
-
-        <div className="regulation-settings-grid">
-          <div className="info-field">
-            <label>Phương thức mặc định</label>
-            <select name="method" value={regulationConfig.method} onChange={handleRegulationChange} className="text-input">
-              <option value="breathing">Hít thở theo nhịp</option>
-              <option value="quiet">Góc yên tĩnh</option>
-              <option value="music">Âm thanh nhẹ</option>
-              <option value="parent">Gọi phụ huynh</option>
-            </select>
-          </div>
-
-          <div className="info-field">
-            <label>Người hỗ trợ</label>
-            <input type="text" name="contact" value={regulationConfig.contact} onChange={handleRegulationChange} className="text-input" />
-          </div>
-
-          <div className="info-field">
-            <label>Cảnh báo sau</label>
-            <select name="alertAfter" value={regulationConfig.alertAfter} onChange={handleRegulationChange} className="text-input">
-              <option value="60">1 phút tiêu cực kéo dài</option>
-              <option value="120">2 phút tiêu cực kéo dài</option>
-            </select>
-          </div>
-
-          <label className="quiet-mode-toggle">
-            <input type="checkbox" name="quietMode" checked={regulationConfig.quietMode} onChange={handleRegulationChange} />
-            <span>Ưu tiên giao diện yên tĩnh khi trẻ mất bình tĩnh</span>
-          </label>
-        </div>
-
-        <div className="action-button settings-action-row">
-          <button className="btn btn-primary" onClick={handleSaveRegulation}>✓ Lưu thiết lập</button>
         </div>
       </section>
 

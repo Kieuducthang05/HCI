@@ -662,14 +662,15 @@
   min-height: 100vh;
   background: #faf9f6;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 20px;
+  padding: 32px 20px;
+  box-sizing: border-box;
 }
 
 .select-user-modal-box {
   width: 66vw;
-  height: 75vh;
+  height: auto;
   background: white;
   border-radius: 32px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
@@ -678,8 +679,8 @@
   flex-direction: column;
   padding: 40px;
   min-width: 360px;
-  min-height: 0;
-  overflow: hidden;
+  min-height: 75vh;
+  overflow: visible;
   border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
@@ -721,12 +722,12 @@
   justify-content: center;
   gap: 20px;
   width: 100%;
-  flex: 1;
+  flex: 0 1 auto;
   align-items: center;
   align-content: center;
   flex-wrap: wrap;
-  min-height: 0;
-  overflow: hidden;
+  min-height: max-content;
+  overflow: visible;
 }
 
 .profiles-row-compact {
@@ -762,8 +763,8 @@
 }
 
 .profiles-row-scroll {
-  max-height: 100%;
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
   justify-content: center;
   align-items: flex-start;
   align-content: flex-start;

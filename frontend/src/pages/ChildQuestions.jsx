@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
+import { FiCheckCircle } from 'react-icons/fi'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
 import { contentApi, getSelectedChild, setSelectedChild } from '../services/api'
 import '../styles/Child.css'
@@ -43,143 +44,41 @@ function getMediaKind(value) {
   return null
 }
 
-function isLikelyMediaLink(value) {
-  return /^(https?:|blob:|data:|\/)/i.test(String(value || '').trim())
-}
-
-function getEmbeddableMediaUrl(value) {
-  const source = String(value || '').trim()
-  if (!source) return ''
-
-  try {
-    const url = new URL(source, window.location.origin)
-    const host = url.hostname.replace(/^www\./, '').toLowerCase()
-
-    if (host === 'youtu.be') {
-      const videoId = url.pathname.split('/').filter(Boolean)[0]
-      if (videoId) return `https://www.youtube.com/embed/${videoId}`
-    }
-
-    if (host.endsWith('youtube.com')) {
-      const videoId = url.searchParams.get('v')
-      const shortsMatch = url.pathname.match(/^\/shorts\/([^/]+)/)
-      const embedMatch = url.pathname.match(/^\/embed\/([^/]+)/)
-
-      if (videoId) return `https://www.youtube.com/embed/${videoId}`
-      if (shortsMatch?.[1]) return `https://www.youtube.com/embed/${shortsMatch[1]}`
-      if (embedMatch?.[1]) return url.href
-    }
-
-    if (host === 'drive.google.com') {
-      const fileMatch = url.pathname.match(/\/file\/d\/([^/]+)/)
-      const fileId = fileMatch?.[1] || url.searchParams.get('id')
-      if (fileId) return `https://drive.google.com/file/d/${fileId}/preview`
-    }
-  } catch {
-    return source
-  }
-
-  return source
-}
-
 function makeSessionKey(contentId) {
   if (window.crypto?.randomUUID) return `question-${contentId}-${window.crypto.randomUUID()}`
   return `question-${contentId}-${Date.now()}`
 }
 
-function LinkedMedia({ source, title }) {
-  const embedUrl = getEmbeddableMediaUrl(source)
-  const [showEmbed, setShowEmbed] = useState(embedUrl !== source)
-
-  if (showEmbed) {
-    return (
-      <div className="lesson-media-frame lesson-media-embed-frame">
-        <iframe
-          className="lesson-media-iframe"
-          src={embedUrl}
-          title={`Media ${title}`}
-          loading="lazy"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div className="lesson-media-frame">
-      <img
-        className="lesson-media-image"
-        src={source}
-        alt={`Minh họa ${title}`}
-        onError={() => setShowEmbed(true)}
-      />
-    </div>
-  )
+function isQuizRewarded(content) {
+  return Number(content?.progress?.stars_earned || 0) > 0
 }
 
-function ContentMedia({ media, fallback = '❓', title = 'media câu hỏi' }) {
+function getPlayableQuizzes(contents) {
+  return contents.filter((content) => !isQuizRewarded(content))
+}
+
+function QuizImage({ media, title }) {
   const source = String(media || '').trim()
-  const mediaKind = getMediaKind(source)
-
-  if (source && mediaKind === 'video') {
-    return (
-      <div className="lesson-media-frame">
-        <video
-          className="lesson-media-video"
-          src={source}
-          controls
-          preload="metadata"
-          playsInline
-          aria-label={`Video ${title}`}
-        />
-      </div>
-    )
-  }
-
-  if (source && mediaKind === 'image') {
-    return (
-      <div className="lesson-media-frame">
-        <img className="lesson-media-image" src={source} alt={`Minh họa ${title}`} />
-      </div>
-    )
-  }
-
-  if (source && isLikelyMediaLink(source)) {
-    return <LinkedMedia key={source} source={source} title={title} />
-  }
+  if (getMediaKind(source) !== 'image') return null
 
   return (
-    <div className="emotion-circle" style={{ backgroundColor: '#e3f2fd' }}>
-      <span className="big-emoji">{source || fallback}</span>
+    <div className="question-image-frame">
+      <img className="question-image" src={source} alt={`Minh họa ${title}`} />
     </div>
   )
 }
 
-function QuizContent({ content, onAnswer, onSpeakQuestion, isSpeaking }) {
+function QuizContent({ content, onAnswer, answerDisabled }) {
   const quiz = content.quiz || {}
   const answers = quiz.answer_emotions || []
   const question = quiz.description || content.title
+  const hasImage = getMediaKind(quiz.media_url) === 'image'
 
   return (
-    <>
-      <div className="quiz-media-card">
-        <ContentMedia media={quiz.media_url} title={content.title} />
-        <h2 className="emotion-title">{content.title}</h2>
-        <p className="emotion-description">Chọn câu trả lời đúng để backend ghi nhận điểm sao.</p>
-      </div>
-
+    <div className={`question-quiz-content ${hasImage ? 'has-image' : 'text-only'}`}>
+      {hasImage && <QuizImage media={quiz.media_url} title={content.title} />}
       <div className="quiz-section">
-        <h3 className="quiz-question">{question}</h3>
-        <button
-          className={`question-speak-btn ${isSpeaking ? 'active' : ''}`}
-          onClick={() => onSpeakQuestion(question)}
-          type="button"
-          aria-pressed={isSpeaking}
-        >
-          <span aria-hidden="true">{isSpeaking ? '■' : '🔊'}</span>
-          {isSpeaking ? 'Dừng đọc' : 'Nghe câu hỏi'}
-        </button>
+        <p className="quiz-question">{question}</p>
         <div className="quiz-options">
           {answers.map((answer) => {
             const info = emotionInfo(answer)
@@ -188,6 +87,7 @@ function QuizContent({ content, onAnswer, onSpeakQuestion, isSpeaking }) {
                 key={answer}
                 className="quiz-option-btn"
                 onClick={() => onAnswer(answer)}
+                disabled={answerDisabled}
                 aria-label={info.label}
                 title={info.label}
               >
@@ -197,20 +97,36 @@ function QuizContent({ content, onAnswer, onSpeakQuestion, isSpeaking }) {
           })}
         </div>
       </div>
-    </>
+    </div>
+  )
+}
+
+function QuestionExhaustedDialog({ onClose }) {
+  return (
+    <div className="question-empty-overlay" role="dialog" aria-modal="true" aria-labelledby="question-empty-title">
+      <div className="question-empty-dialog">
+        <div className="question-empty-icon" aria-hidden="true">
+          <FiCheckCircle />
+        </div>
+        <h2 id="question-empty-title">Đã hết câu hỏi cho bé chơi rồi</h2>
+        <button type="button" onClick={onClose}>Về trang chủ</button>
+      </div>
+    </div>
   )
 }
 
 export default function ChildQuestions() {
+  const navigate = useNavigate()
   const { setUserStars } = useOutletContext()
   const selectedChild = getSelectedChild()
   const [questions, setQuestions] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showResult, setShowResult] = useState(null)
   const [lastOutcome, setLastOutcome] = useState(null)
+  const [showNoQuestionsDialog, setShowNoQuestionsDialog] = useState(false)
+  const [submittingAnswer, setSubmittingAnswer] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [speakingQuestionId, setSpeakingQuestionId] = useState(null)
 
   const current = questions[currentIndex]
   useEffect(() => {
@@ -220,7 +136,10 @@ export default function ChildQuestions() {
     contentApi.list(selectedChild.id, { type: 'QUIZ', include_locked: true })
       .then((result) => {
         if (!mounted) return
-        setQuestions(result.contents || [])
+        const playableQuizzes = getPlayableQuizzes(result.contents || [])
+        setQuestions(playableQuizzes)
+        setCurrentIndex(0)
+        setShowNoQuestionsDialog(playableQuizzes.length === 0)
         setError('')
       })
       .catch((err) => {
@@ -235,25 +154,24 @@ export default function ChildQuestions() {
     }
   }, [selectedChild?.id])
 
-  useEffect(() => {
-    return () => {
-      window.speechSynthesis?.cancel()
-    }
-  }, [])
-
-  useEffect(() => {
-    window.speechSynthesis?.cancel()
-  }, [currentIndex])
-
-  const stopQuestionSpeech = () => {
-    window.speechSynthesis?.cancel()
-    setSpeakingQuestionId(null)
-  }
-
   const updateStars = (totalStars) => {
     if (typeof totalStars !== 'number') return
     setUserStars(totalStars)
     setSelectedChild({ ...selectedChild, total_stars: totalStars })
+  }
+
+  const leaveQuestionScreen = () => {
+    navigate('/child/home', { replace: true })
+  }
+
+  const removeQuestionFromPlayableList = (contentId) => {
+    const remainingQuestions = questions.filter((question) => question.id !== contentId)
+    setQuestions(remainingQuestions)
+    setCurrentIndex((index) => Math.min(index, Math.max(remainingQuestions.length - 1, 0)))
+
+    if (remainingQuestions.length === 0) {
+      setShowNoQuestionsDialog(true)
+    }
   }
 
   const ensureUnlocked = async (content) => {
@@ -313,64 +231,63 @@ export default function ChildQuestions() {
       )))
       return { starsEarned: stars }
     } catch (err) {
+      if (err.type === 'CONTENT_ALREADY_REWARDED') {
+        return { starsEarned: 0, alreadyCompleted: true }
+      }
+
       setError(err.message || 'Chưa lưu được kết quả câu hỏi.')
       return { starsEarned: 0 }
     }
   }
 
   const handleAnswer = async (selectedEmotion) => {
-    if (!current || showResult) return
-    stopQuestionSpeech()
-
-    const correctEmotion = normalizeEmotion(current.quiz?.correct_emotion)
-    const selected = normalizeEmotion(selectedEmotion)
-    const isCorrect = selected === correctEmotion
-    const result = await recordQuestionSession({
-      content: current,
-      isCorrect,
-      selectedEmotion: selected,
-    })
-    const correctInfo = emotionInfo(correctEmotion)
-
-    setLastOutcome({
-      starsEarned: result.starsEarned,
-      explanation: isCorrect
-        ? `Backend đã cộng ${result.starsEarned} sao cho câu trả lời đúng.`
-        : `Đáp án đúng là ${correctInfo.emoji} ${correctInfo.label}.`,
-    })
-    setShowResult(isCorrect ? 'correct' : 'incorrect')
-  }
-
-  const handleSpeakQuestion = (questionText) => {
-    if (!window.speechSynthesis) {
-      setError('Trình duyệt hiện tại chưa hỗ trợ đọc câu hỏi.')
+    if (!current || showResult || submittingAnswer) return
+    if (isQuizRewarded(current)) {
+      removeQuestionFromPlayableList(current.id)
       return
     }
 
-    const speechId = current?.id ?? currentIndex
+    try {
+      setSubmittingAnswer(true)
+      const correctEmotion = normalizeEmotion(current.quiz?.correct_emotion)
+      const selected = normalizeEmotion(selectedEmotion)
+      const isCorrect = selected === correctEmotion
+      const result = await recordQuestionSession({
+        content: current,
+        isCorrect,
+        selectedEmotion: selected,
+      })
 
-    if (speakingQuestionId === speechId) {
-      window.speechSynthesis.cancel()
-      setSpeakingQuestionId(null)
-      return
+      if (result.alreadyCompleted) {
+        removeQuestionFromPlayableList(current.id)
+        return
+      }
+
+      const correctInfo = emotionInfo(correctEmotion)
+      setLastOutcome({
+        completedContentId: current.id,
+        starsEarned: result.starsEarned,
+        explanation: isCorrect
+          ? `Backend đã cộng ${result.starsEarned} sao cho câu trả lời đúng.`
+          : `Đáp án đúng là ${correctInfo.emoji} ${correctInfo.label}.`,
+      })
+      setShowResult(isCorrect ? 'correct' : 'incorrect')
+    } finally {
+      setSubmittingAnswer(false)
     }
-
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(`Câu hỏi. ${questionText}. Con hãy chọn đáp án đúng nhé.`)
-    utterance.lang = 'vi-VN'
-    utterance.rate = 0.82
-    utterance.pitch = 1
-    utterance.volume = 0.9
-    utterance.onend = () => setSpeakingQuestionId(null)
-    utterance.onerror = () => setSpeakingQuestionId(null)
-    setSpeakingQuestionId(speechId)
-    window.speechSynthesis.speak(utterance)
   }
 
   const handleContinueResult = () => {
-    stopQuestionSpeech()
+    const completedContentId = lastOutcome?.completedContentId
+    const shouldRemoveCompletedQuiz = Boolean(completedContentId && lastOutcome?.starsEarned > 0)
+
     setShowResult(null)
     setLastOutcome(null)
+
+    if (shouldRemoveCompletedQuiz) {
+      removeQuestionFromPlayableList(completedContentId)
+      return
+    }
 
     if (currentIndex < questions.length - 1) {
       setCurrentIndex((index) => index + 1)
@@ -380,12 +297,10 @@ export default function ChildQuestions() {
   }
 
   const handleNext = () => {
-    stopQuestionSpeech()
     setCurrentIndex((index) => Math.min(index + 1, questions.length - 1))
   }
 
   const handlePrev = () => {
-    stopQuestionSpeech()
     setCurrentIndex((index) => Math.max(index - 1, 0))
   }
 
@@ -412,6 +327,8 @@ export default function ChildQuestions() {
 
   return (
     <div className="question-page">
+      {showNoQuestionsDialog && <QuestionExhaustedDialog onClose={leaveQuestionScreen} />}
+
       {showResult === 'correct' && (
         <CorrectAnswer
           resultType="question"
@@ -433,13 +350,6 @@ export default function ChildQuestions() {
       )}
 
       <div className="lesson-card">
-        <div className="question-page-heading">
-          <div>
-            <h2>Câu hỏi</h2>
-            <p>Chọn đáp án đúng cho từng câu hỏi cảm xúc.</p>
-          </div>
-        </div>
-
         {error && <p className="camera-error">{error}</p>}
 
         {!current ? (
@@ -452,12 +362,11 @@ export default function ChildQuestions() {
             <QuizContent
               content={current}
               onAnswer={handleAnswer}
-              onSpeakQuestion={handleSpeakQuestion}
-              isSpeaking={speakingQuestionId === (current?.id ?? currentIndex)}
+              answerDisabled={submittingAnswer}
             />
 
             <div className="lesson-navigation">
-              <button className="nav-btn" onClick={handlePrev} disabled={currentIndex === 0}>← Trước</button>
+              <button className="nav-btn" onClick={handlePrev} disabled={currentIndex === 0 || submittingAnswer}>Trước</button>
 
               <div className="progress">
                 <span className="progress-text">{currentIndex + 1} / {questions.length}</span>
@@ -466,7 +375,7 @@ export default function ChildQuestions() {
                 </div>
               </div>
 
-              <button className="nav-btn" onClick={handleNext} disabled={currentIndex === questions.length - 1}>Tiếp →</button>
+              <button className="nav-btn" onClick={handleNext} disabled={currentIndex === questions.length - 1 || submittingAnswer}>Tiếp</button>
             </div>
           </>
         )}

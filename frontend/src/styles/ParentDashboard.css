@@ -272,6 +272,13 @@ body {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
+  text-align: left;
+}
+
+.chatbot-alert-header > div {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
 }
 
 .chatbot-alert-header h2 {

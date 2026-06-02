@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { FiArrowLeft } from 'react-icons/fi'
 import { chatbotApi, getSelectedChild, preferencesApi, trackingApi } from '../services/api'
 import '../styles/ChildChat.css'
 
@@ -283,11 +284,15 @@ export default function ChildChat() {
   return (
     <div className="child-chat-container">
       <div className="chat-header">
+        <button className="back-btn" type="button" onClick={() => navigate('/child/home')}>
+          <FiArrowLeft aria-hidden="true" />
+          <span>Back</span>
+        </button>
         <div className="chat-header-title">
           <div className="bunny-icon-header">
             <BunnyIcon />
           </div>
-          <div>
+          <div className="chat-header-copy">
             <h2>Thỏ</h2>
             <p>Trợ lý ảo của em 🐰</p>
           </div>

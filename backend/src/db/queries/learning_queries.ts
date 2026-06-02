@@ -102,6 +102,35 @@ export async function getContentSessionByChildIdempotencyKey(
   });
 }
 
+export function getContentSessionRewardLockKey(childId: string, unlockContentId: string) {
+  return `content-session-reward:${childId}:${unlockContentId}`;
+}
+
+export async function lockContentSessionReward(
+  db: DbExecutor,
+  childId: string,
+  unlockContentId: string,
+) {
+  const rewardLockKey = getContentSessionRewardLockKey(childId, unlockContentId);
+  await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${rewardLockKey}))`);
+}
+
+export async function getRewardedContentSessionByUnlock(
+  db: DbExecutor,
+  childId: string,
+  unlockContentId: string,
+) {
+  return await db.query.contentSessions.findFirst({
+    columns: { id: true },
+    where: and(
+      eq(contentSessions.childId, childId),
+      eq(contentSessions.unlockContentId, unlockContentId),
+      eq(contentSessions.status, "COMPLETED"),
+      gt(contentSessions.starsEarned, 0),
+    ),
+  });
+}
+
 export async function getChildContentProgressRows(db: DbExecutor, childId: string) {
   return await db
     .select({
@@ -155,18 +184,12 @@ export async function finishContentSessionTx(
   let effectiveEarnedStars = sessionStatus === "COMPLETED" ? earnedStars : 0;
 
   if (effectiveEarnedStars > 0) {
-    const rewardLockKey = `content-session-reward:${sessionData.childId}:${sessionData.unlockContentId}`;
-    await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${rewardLockKey}))`);
-
-    const existingRewardedSession = await db.query.contentSessions.findFirst({
-      columns: { id: true },
-      where: and(
-        eq(contentSessions.childId, sessionData.childId),
-        eq(contentSessions.unlockContentId, sessionData.unlockContentId),
-        eq(contentSessions.status, "COMPLETED"),
-        gt(contentSessions.starsEarned, 0),
-      ),
-    });
+    await lockContentSessionReward(db, sessionData.childId, sessionData.unlockContentId);
+    const existingRewardedSession = await getRewardedContentSessionByUnlock(
+      db,
+      sessionData.childId,
+      sessionData.unlockContentId,
+    );
 
     if (existingRewardedSession) {
       effectiveEarnedStars = 0;
