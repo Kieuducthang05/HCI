@@ -2640,12 +2640,16 @@ body.dark-mode {
 }
 
 .game1-shell {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     padding: clamp(12px, 2vh, 20px) clamp(14px, 2.5vw, 30px);
 }
 
 .game1-shell .choose-emotion-content {
     max-width: min(100%, 680px);
-    height: 100%;
+    height: auto;
+    flex: 1;
     padding: 0;
     margin: 0 auto;
     align-items: stretch;
@@ -2674,16 +2678,16 @@ body.dark-mode {
 }
 
 .game1-options-grid {
-    width: min(100%, 580px);
     display: grid;
-    grid-template-columns: repeat(2, minmax(160px, 260px));
+    grid-template-columns: repeat(2, auto);
     justify-content: center;
     gap: clamp(10px, 1.8vh, 16px) clamp(14px, 2.5vw, 24px);
     margin: clamp(8px, 1.4vh, 14px) auto clamp(10px, 1.8vh, 16px);
 }
 
 .game1-option-card {
-    width: 100%;
+    width: clamp(100px, calc(34vh - 90px), 260px);
+    height: clamp(100px, calc(34vh - 90px), 260px);
     aspect-ratio: 1;
     display: block;
     padding: 0;
@@ -3324,6 +3328,8 @@ body.dark-mode {
 
     .game1-option-card {
         border-radius: 22px;
+        width: 100%;
+        height: auto;
     }
 
     .game1-person {

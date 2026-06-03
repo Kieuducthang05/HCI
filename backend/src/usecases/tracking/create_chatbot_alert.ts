@@ -86,11 +86,13 @@ function toChatbotAlertResult(row: {
 }
 
 async function dispatchWarningPush(parentId: string, childId: string, reason: string) {
+  console.log(`[INFO] Fetching active device tokens for parent user ID: ${parentId}`);
   const tokens = await db.query.deviceTokens.findMany({
     where: and(eq(deviceTokens.userId, parentId), eq(deviceTokens.isActive, true)),
   });
 
   if (tokens.length === 0) {
+    console.log(`[INFO] No active devices registered for parent ID: ${parentId}. Skipping push dispatch.`);
     return {
       status: "NO_DEVICES" as const,
       notificationSentAt: null,
@@ -98,6 +100,9 @@ async function dispatchWarningPush(parentId: string, childId: string, reason: st
     };
   }
 
+  console.log(
+    `[INFO] Sending push notification to ${tokens.length} active device(s) for child ID: ${childId}. Reason: "${reason}"`,
+  );
   const result = await sendPushNotification(
     tokens.map((token) => token.pushToken),
     CHATBOT_WARNING_TITLE,
@@ -106,6 +111,10 @@ async function dispatchWarningPush(parentId: string, childId: string, reason: st
       child_id: childId,
       alert_source: "CHATBOT",
     },
+  );
+
+  console.log(
+    `[INFO] FCM push notification dispatch result: Success=${result.successCount}, Failure=${result.failureCount}, Mocked=${result.mocked}`,
   );
 
   if (result.successCount > 0) {

@@ -4,6 +4,7 @@ import { exportChildSummaryPdf } from "../usecases/reports/export_child_summary_
 import { createChatbotAlert } from "../usecases/tracking/create_chatbot_alert.ts";
 import { listEmotionLogs } from "../usecases/tracking/list_emotion_logs.ts";
 import { listChildAlerts } from "../usecases/tracking/list_child_alerts.ts";
+import { clearChildAlerts } from "../usecases/tracking/clear_child_alerts.ts";
 import { recordEmotionLog } from "../usecases/tracking/log_emotion.ts";
 import { predictEmotionFromImage } from "../usecases/tracking/predict_emotion_from_image.ts";
 import { withApiErrorHandler } from "./api_error_handler.ts";
@@ -287,6 +288,25 @@ const protectedTrackingRouter = new Elysia()
         to: t.Optional(t.String()),
         cursor: t.Optional(t.String()),
         limit: t.Optional(t.String()),
+      }),
+    },
+  )
+  .delete(
+    "/children/:childId/alerts",
+    async ({ authUserId, params, set }) => {
+      await clearChildAlerts({
+        parentId: authUserId,
+        childId: params.childId,
+      });
+
+      set.status = 200;
+      return {
+        message: "Chatbot warning alerts cleared successfully.",
+      };
+    },
+    {
+      params: t.Object({
+        childId: t.String(),
       }),
     },
   )

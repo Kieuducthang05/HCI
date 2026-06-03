@@ -216,6 +216,11 @@ export const authApi = {
   }),
 }
 
+export const devicesApi = {
+  register: (payload) => apiRequest('/devices', { method: 'POST', body: payload }),
+  deregister: (deviceId) => apiRequest(`/devices/${deviceId}`, { method: 'DELETE' }),
+}
+
 export const childrenApi = {
   list: () => apiRequest('/children'),
   detail: (childId) => apiRequest(`/children/${childId}`),
@@ -263,6 +268,9 @@ export const trackingApi = {
   createAlert: (childId, reason) => apiRequest(`/children/${childId}/alerts`, {
     method: 'POST',
     body: { reason },
+  }),
+  clearAlerts: (childId) => apiRequest(`/children/${childId}/alerts`, {
+    method: 'DELETE',
   }),
   downloadSummaryPdf: (childId, query = { days: 7 }) => apiRequest(`/children/${childId}/reports/summary.pdf`, {
     query,
