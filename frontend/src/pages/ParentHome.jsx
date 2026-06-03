@@ -218,6 +218,28 @@ export default function ParentHome() {
     }
   }
 
+  const handleClearAlerts = async () => {
+    if (!currentChildId) return
+
+    try {
+      setError('')
+      await trackingApi.clearAlerts(currentChildId)
+      setDashboard((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          chatbot_alerts: {
+            total: 0,
+            recent: [],
+          },
+        }
+      })
+    } catch (err) {
+      console.error('Could not clear chatbot alerts:', err)
+      setError(err.message || 'Không xóa được cảnh báo. Vui lòng thử lại.')
+    }
+  }
+
   if (!currentChild) {
     return (
       <div className="parent-home">
@@ -293,7 +315,18 @@ export default function ParentHome() {
             <h2>Cảnh báo từ chatbot</h2>
             <p>Khi bé nói nội dung tiêu cực hoặc có rủi ro, cảnh báo sẽ xuất hiện ở đây.</p>
           </div>
-          <span className="chatbot-alert-count">{chatbotAlertTotal}</span>
+          <div className="chatbot-alert-actions">
+            {chatbotAlertTotal > 0 && (
+              <button
+                type="button"
+                className="clear-alerts-btn"
+                onClick={handleClearAlerts}
+              >
+                Xóa cảnh báo
+              </button>
+            )}
+            <span className="chatbot-alert-count">{chatbotAlertTotal}</span>
+          </div>
         </div>
 
         <div className="chatbot-alert-list">
@@ -319,9 +352,6 @@ export default function ParentHome() {
                   {parsed.childMessage && (
                     <blockquote>“{parsed.childMessage}”</blockquote>
                   )}
-                  <span className="chatbot-alert-status">
-                    {notificationStatusLabel(alert.notification_status)}
-                  </span>
                 </div>
               </article>
             )
