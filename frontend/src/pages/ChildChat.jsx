@@ -306,12 +306,14 @@ export default function ChildChat() {
             )}
             <div className="message-content">
               <p className="message-text">{message.text}</p>
-              <span className="message-time">
-                {message.timestamp.toLocaleTimeString('vi-VN', {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </span>
+              {message.sender === 'user' && (
+                <span className="message-time">
+                  {message.timestamp.toLocaleTimeString('vi-VN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+              )}
             </div>
           </div>
         ))}

@@ -3635,53 +3635,26 @@ body.dark-mode {
     font-size: 18px;
 }
 
-/* Active Pet Floating Box */
-.active-pet-floating-box {
+/* Standalone Pet Companion */
+.active-pet-companion {
     position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 150px;
-    background: #ffffff;
-    border-radius: 20px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    bottom: 20px;
+    right: 20px;
+    width: 220px;
+    height: 220px;
     z-index: 1000;
-    overflow: hidden;
+    pointer-events: none;
     display: flex;
-    flex-direction: column;
-    animation: slideUp 0.5s ease-out;
-    border: 3px solid #eef2ff;
+    align-items: flex-end;
+    justify-content: flex-end;
+    animation: slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.pet-floating-header {
-    background: #f1f5f9;
-    padding: 8px 12px;
-    text-align: center;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.pet-floating-header span {
-    font-size: 14px;
-    font-weight: 800;
-    color: #475569;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-}
-
-.pet-floating-body {
-    height: 120px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-    background: #fff;
-}
-
-.pet-floating-body img {
+.active-pet-companion img {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.12));
 }
 
 .shop-header {

@@ -123,18 +123,13 @@ export default function ChildLayout() {
                 <Outlet context={{ userStars, setUserStars }} />
             </main>
 
-            {/* Floating Active Pet Box */}
+            {/* Floating Active Pet */}
             {activePet && (
-                <div className="active-pet-floating-box">
-                    <div className="pet-floating-header">
-                        <span>{activePet.name}</span>
-                    </div>
-                    <div className="pet-floating-body">
-                        <img 
-                            src={activePet.animationUrl || activePet.imageUrl} 
-                            alt={activePet.name} 
-                        />
-                    </div>
+                <div className="active-pet-companion">
+                    <img 
+                        src={activePet.animationUrl || activePet.imageUrl} 
+                        alt={activePet.name} 
+                    />
                 </div>
             )}
 
