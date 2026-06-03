@@ -1,19 +1,31 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate, Outlet, useLocation } from 'react-router-dom'
-import { FiHome, FiPackage, FiLogOut } from 'react-icons/fi'
-import { childrenApi, getSelectedChild, setSelectedChild } from '../services/api'
+import { FiHome, FiPackage, FiLogOut, FiHeart } from 'react-icons/fi'
+import { childrenApi, getSelectedChild, setSelectedChild, petsApi, resolveMediaUrl } from '../services/api'
 import { FaStar } from 'react-icons/fa'
 import '../styles/Child.css'
+
+function activePetStorageKey(childId) {
+    return `hci.activePet.${childId}`
+}
 
 export default function ChildLayout() {
     const navigate = useNavigate()
     const location = useLocation()
     const selectedChild = getSelectedChild()
     const [userStars, setUserStars] = useState(selectedChild?.total_stars || 0)
+    const [activePet, setActivePet] = useState(null)
+    
     const activeMenu = location.pathname.split('/')[2] || 'home'
     const showTopbar = activeMenu !== 'chat'
     const isPlainChildPage = ['questions', 'games'].includes(activeMenu)
     const childDisplayName = selectedChild?.nickname || selectedChild?.name || 'bé'
+
+    // Trang cho phép hiện pet: home, learn, games, questions, chat
+    const showPetBox = useMemo(() => {
+        const petPages = ['home', 'learn', 'games', 'questions', 'chat', 'emotion', 'calm-corner', 'emotion-recognition']
+        return petPages.includes(activeMenu)
+    }, [activeMenu])
 
     useEffect(() => {
         const child = getSelectedChild()
@@ -29,6 +41,36 @@ export default function ChildLayout() {
                 setUserStars(child.total_stars || 0)
             })
     }, [])
+
+    // Tải thông tin pet đang dùng
+    useEffect(() => {
+        if (!selectedChild?.id || !showPetBox) {
+            setActivePet(null)
+            return
+        }
+
+        const activeId = localStorage.getItem(activePetStorageKey(selectedChild.id))
+        if (!activeId) {
+            setActivePet(null)
+            return
+        }
+
+        petsApi.listChildPets(selectedChild.id)
+            .then(result => {
+                const found = result.child_pets?.find(p => p.id === activeId)
+                if (found) {
+                    const pet = found.pet || {}
+                    setActivePet({
+                        name: found.custom_name || pet.name || 'Bạn nhỏ',
+                        imageUrl: resolveMediaUrl(pet.image_url),
+                        animationUrl: resolveMediaUrl(pet.animation_url)
+                    })
+                } else {
+                    setActivePet(null)
+                }
+            })
+            .catch(() => setActivePet(null))
+    }, [selectedChild?.id, location.pathname, showPetBox])
 
     const menuItems = [
         { id: 'home', label: 'Trang chủ', icon: <FiHome /> },
@@ -80,6 +122,21 @@ export default function ChildLayout() {
                 {/* Truyền điểm số xuống cho các trang con sử dụng */}
                 <Outlet context={{ userStars, setUserStars }} />
             </main>
+
+            {/* Floating Active Pet Box */}
+            {activePet && (
+                <div className="active-pet-floating-box">
+                    <div className="pet-floating-header">
+                        <span>{activePet.name}</span>
+                    </div>
+                    <div className="pet-floating-body">
+                        <img 
+                            src={activePet.animationUrl || activePet.imageUrl} 
+                            alt={activePet.name} 
+                        />
+                    </div>
+                </div>
+            )}
 
         </div>
     )

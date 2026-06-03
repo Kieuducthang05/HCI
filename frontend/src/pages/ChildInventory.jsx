@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { FiBox, FiCheckCircle, FiGrid, FiPackage } from 'react-icons/fi'
 import { getSelectedChild, petsApi, resolveMediaUrl } from '../services/api'
 import '../styles/Child.css'
 
@@ -62,8 +63,8 @@ export default function ChildInventory() {
     : inventory.filter((item) => selectedCategory === 'active' ? item.id === activePetId : true)
 
   const categories = [
-    { id: 'all', label: 'Tất cả', emoji: '🎒' },
-    { id: 'active', label: 'Đang dùng', emoji: '✓' },
+    { id: 'all', label: 'Tất cả', icon: <FiGrid /> },
+    { id: 'active', label: 'Đang dùng', icon: <FiCheckCircle /> },
   ]
 
   const handleUsePet = (item) => {
@@ -73,20 +74,25 @@ export default function ChildInventory() {
   }
 
   return (
-    <div className="child-inventory shop-container">
+    <div className="child-inventory shop-container" style={{ position: 'relative' }}>
       <div className="inventory-header shop-header">
         <div className="shop-title-section">
-          <h2 className="shop-title">🎒 Kho vật phẩm của bé</h2>
+          <h2 className="shop-title">
+            <FiPackage style={{ marginRight: '10px', verticalAlign: 'middle' }} />
+            Kho vật phẩm của bé
+          </h2>
           <p className="shop-description">Những pet và vật phẩm ba mẹ đã đổi sao cho bé.</p>
         </div>
       </div>
 
-      <div className="shop-stars-display" style={{ marginBottom: '20px', justifyContent: 'center' }}>
-        <span className="stars-label">Vật phẩm đã có:</span>
-        <span className="stars-amount" style={{ background: '#e0f2fe', color: '#0369a1' }}>
-          <span className="stars-icon" style={{ background: '#7dd3fc' }} aria-hidden="true">✓</span>
-          <span>{inventory.length}</span>
-        </span>
+      <div className="inventory-stats-badge">
+        <div className="stats-badge-content">
+          <span className="stats-badge-label">Vật phẩm đã có:</span>
+          <div className="stats-badge-value">
+            <FiBox className="stats-badge-icon" />
+            <span>{inventory.length}</span>
+          </div>
+        </div>
       </div>
 
       <div className="shop-filters">
@@ -96,7 +102,9 @@ export default function ChildInventory() {
             className={`filter-tab ${selectedCategory === cat.id ? 'active' : ''}`}
             onClick={() => setSelectedCategory(cat.id)}
           >
-            <span className="emoji" style={{ marginRight: '6px' }}>{cat.emoji}</span>
+            <span className="icon-wrapper" style={{ marginRight: '8px', display: 'inline-flex', alignItems: 'center' }}>
+              {cat.icon}
+            </span>
             <span>{cat.label}</span>
           </button>
         ))}
@@ -121,7 +129,9 @@ export default function ChildInventory() {
                 {item.imageUrl ? (
                   <img className="product-image" src={item.imageUrl} alt={item.name} />
                 ) : (
-                  <div className="product-image">🐾</div>
+                  <div className="product-image" style={{ color: '#94a3b8' }}>
+                    <FiPackage size={48} />
+                  </div>
                 )}
               </div>
 
@@ -135,9 +145,20 @@ export default function ChildInventory() {
                   className="buy-product-btn use-item-btn" 
                   onClick={() => handleUsePet(item)} 
                   disabled={isActive}
-                  style={{ width: '100%', background: isActive ? '#10b981' : '#2f63b7' }}
+                  style={{ 
+                    width: '100%', 
+                    background: isActive ? '#10b981' : '#2f63b7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
                 >
-                  {isActive ? 'Đang dùng ✓' : 'Dùng ngay'}
+                  {isActive ? (
+                    <>
+                      <FiCheckCircle /> Đang dùng
+                    </>
+                  ) : 'Dùng ngay'}
                 </button>
               </div>
             </div>

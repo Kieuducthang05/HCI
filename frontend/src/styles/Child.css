@@ -3594,6 +3594,96 @@ body.dark-mode {
 }
 
 /* Base Shop Styles for Child App */
+.inventory-stats-badge {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    z-index: 10;
+}
+
+.stats-badge-content {
+    background: #ffffff;
+    border: 2px solid #e0f2fe;
+    border-radius: 16px;
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.stats-badge-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stats-badge-value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #0369a1;
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.stats-badge-icon {
+    color: #0ea5e9;
+    font-size: 18px;
+}
+
+/* Active Pet Floating Box */
+.active-pet-floating-box {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 150px;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    z-index: 1000;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.5s ease-out;
+    border: 3px solid #eef2ff;
+}
+
+.pet-floating-header {
+    background: #f1f5f9;
+    padding: 8px 12px;
+    text-align: center;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.pet-floating-header span {
+    font-size: 14px;
+    font-weight: 800;
+    color: #475569;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.pet-floating-body {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background: #fff;
+}
+
+.pet-floating-body img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
 .shop-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
