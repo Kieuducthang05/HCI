@@ -14,6 +14,7 @@ export default function Login() {
   })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
+  const [googleRecreateKey, setGoogleRecreateKey] = useState(0)
 
   useEffect(() => {
     if (!googleClientId || !googleButtonRef.current) return undefined
@@ -50,18 +51,19 @@ export default function Login() {
         size: 'large',
         width: googleButtonRef.current.offsetWidth || 360,
         text: 'signin_with',
+        locale: 'vi',
       })
     }
 
     if (window.google?.accounts?.id) {
       renderGoogleButton()
     } else {
-      const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]')
+      const existingScript = document.querySelector('script[src^="https://accounts.google.com/gsi/client"]')
       if (existingScript) {
         existingScript.addEventListener('load', renderGoogleButton, { once: true })
       } else {
         const script = document.createElement('script')
-        script.src = 'https://accounts.google.com/gsi/client'
+        script.src = 'https://accounts.google.com/gsi/client?hl=vi'
         script.async = true
         script.defer = true
         script.onload = renderGoogleButton
@@ -73,7 +75,22 @@ export default function Login() {
     return () => {
       cancelled = true
     }
-  }, [googleClientId, navigate])
+  }, [googleClientId, navigate, googleRecreateKey])
+
+  useEffect(() => {
+    const handleBlur = () => {
+      if (document.activeElement && googleButtonRef.current?.contains(document.activeElement)) {
+        setTimeout(() => {
+          setGoogleRecreateKey((prev) => prev + 1)
+        }, 150)
+      }
+    }
+
+    window.addEventListener('blur', handleBlur)
+    return () => {
+      window.removeEventListener('blur', handleBlur)
+    }
+  }, [])
 
   const handleChange = (e) => {
     const { name, value } = e.target

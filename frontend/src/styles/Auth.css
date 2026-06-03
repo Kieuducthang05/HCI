@@ -217,11 +217,43 @@
   height: 18px;
 }
 
+.google-sdk-button,
+.google-sdk-button * {
+  outline: none !important;
+  border-color: transparent !important;
+}
+
+.google-sdk-button:focus,
+.google-sdk-button:active,
+.google-sdk-button *:focus,
+.google-sdk-button *:active {
+  outline: none !important;
+  border: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
 .google-sdk-button {
   min-height: 44px;
   display: flex;
   justify-content: center;
   overflow: hidden;
+  outline: none !important;
+  border: none !important;
+}
+
+.google-sdk-button iframe {
+  border: none !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  box-shadow: none !important;
+}
+
+.google-sdk-button iframe:focus,
+.google-sdk-button iframe:active {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* ==================== Divider ==================== */
@@ -682,6 +714,16 @@
   min-height: 75vh;
   overflow: visible;
   border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.select-user-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .top-bar {

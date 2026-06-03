@@ -123,58 +123,60 @@ export default function SelectUser() {
           </button>
         </div>
 
-        <h1 className="select-user-title">Ai đang ở đây vậy?</h1>
+        <div className="select-user-content-wrapper">
+          <h1 className="select-user-title">Ai đang ở đây vậy?</h1>
 
-        <div className={`profiles-row ${children.length >= 4 ? 'profiles-row-compact' : ''} ${children.length >= 4 ? 'profiles-row-scroll' : ''}`}>
-          {/* Parent Card with MdSupervisorAccount Icon */}
-          <div className="profile-card parent-card" onClick={handleSelectParent}>
-            <div className="parent-icon-circle">
-              <MdSupervisorAccount size={48} />
+          <div className={`profiles-row ${children.length >= 4 ? 'profiles-row-compact' : ''} ${children.length >= 4 ? 'profiles-row-scroll' : ''}`}>
+            {/* Parent Card with MdSupervisorAccount Icon */}
+            <div className="profile-card parent-card" onClick={handleSelectParent}>
+              <div className="parent-icon-circle">
+                <MdSupervisorAccount size={48} />
+              </div>
+              <h3 className="card-title">Khu vực của Bố/Mẹ</h3>
+              <p className="card-subtitle">Quản lý và theo dõi tiến trình</p>
             </div>
-            <h3 className="card-title">Khu vực của Bố/Mẹ</h3>
-            <p className="card-subtitle">Quản lý và theo dõi tiến trình</p>
+
+            {/* Child Cards / Add Card */}
+            {children.length > 0 ? (
+              childCards.map(({ child, color }) => (
+                <div
+                  key={child.id}
+                  className="profile-card child-card-active"
+                  style={{
+                    '--profile-bg': color.background,
+                    '--profile-border': color.border,
+                    '--profile-accent': color.accent,
+                    '--profile-text': color.text,
+                  }}
+                  onClick={() => handleSelectChild(child)}
+                >
+                  <div className="child-avatar-wrapper">
+                    {child.avatar_url ? (
+                      <img src={child.avatar_url} alt={child.nickname} className="child-avatar-img" />
+                    ) : (
+                      <span className="child-avatar-placeholder">🧒</span>
+                    )}
+                  </div>
+                  <h3 className="card-title">{child.nickname || 'Bé'}</h3>
+                  <p className="card-subtitle">Chào mừng con quay lại!</p>
+                </div>
+              ))
+            ) : (
+              <div className="profile-card add-child-card" onClick={handleAddChild}>
+                <div className="add-icon-circle">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <h3 className="card-title">Thêm hồ sơ bé</h3>
+                <p className="card-subtitle">Bắt đầu hành trình cùng con</p>
+              </div>
+            )}
           </div>
 
-          {/* Child Cards / Add Card */}
-          {children.length > 0 ? (
-            childCards.map(({ child, color }) => (
-              <div
-                key={child.id}
-                className="profile-card child-card-active"
-                style={{
-                  '--profile-bg': color.background,
-                  '--profile-border': color.border,
-                  '--profile-accent': color.accent,
-                  '--profile-text': color.text,
-                }}
-                onClick={() => handleSelectChild(child)}
-              >
-                <div className="child-avatar-wrapper">
-                  {child.avatar_url ? (
-                    <img src={child.avatar_url} alt={child.nickname} className="child-avatar-img" />
-                  ) : (
-                    <span className="child-avatar-placeholder">🧒</span>
-                  )}
-                </div>
-                <h3 className="card-title">{child.nickname || 'Bé'}</h3>
-                <p className="card-subtitle">Chào mừng con quay lại!</p>
-              </div>
-            ))
-          ) : (
-            <div className="profile-card add-child-card" onClick={handleAddChild}>
-              <div className="add-icon-circle">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <h3 className="card-title">Thêm hồ sơ bé</h3>
-              <p className="card-subtitle">Bắt đầu hành trình cùng con</p>
-            </div>
-          )}
+          {loading && <p style={{ textAlign: 'center', marginTop: '20px', color: '#94A3B8', fontSize: '14px' }}>Đang tải danh sách...</p>}
+          {error && <p className="error-message" style={{ textAlign: 'center', marginTop: '20px' }}>{error}</p>}
         </div>
-
-        {loading && <p style={{ textAlign: 'center', marginTop: '20px', color: '#94A3B8', fontSize: '14px' }}>Đang tải danh sách...</p>}
-        {error && <p className="error-message" style={{ textAlign: 'center', marginTop: '20px' }}>{error}</p>}
       </div>
     </div>
   )

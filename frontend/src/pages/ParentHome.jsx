@@ -251,12 +251,16 @@ export default function ParentHome() {
     )
   }
 
+  const starCount = dashboard?.child?.total_stars ?? currentChild.total_stars ?? 0;
+
   return (
     <div className="parent-home">
-      <div className="notification-banner milestone-banner">
-        <span>★</span>
-        <span>Bé {currentChild.nickname} đang có {(dashboard?.child?.total_stars ?? currentChild.total_stars ?? 0).toLocaleString()} sao. Hãy vào cửa hàng để đổi vật phẩm mới thưởng cho bé!</span>
-      </div>
+      {starCount >= 10 && (
+        <div className="notification-banner milestone-banner">
+          <span>★</span>
+          <span>Bé {currentChild.nickname} đang có {starCount.toLocaleString()} sao. Hãy vào cửa hàng để đổi vật phẩm mới thưởng cho bé!</span>
+        </div>
+      )}
 
       {error && (
         <div className="notification-banner">
