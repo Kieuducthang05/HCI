@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import bunnyAvatar from '../assets/bunny-avatar.png';
 
 // --- CÁC ICON SVG ---
 const BookIcon = () => (
@@ -34,19 +35,11 @@ const QuestionIcon = () => (
 );
 
 const BunnyIcon = () => (
-  <svg width="50" height="50" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <path d="M 40 55 C 32 15 45 15 48 35" fill="#FCA5B5" />
-    <path d="M 60 55 C 68 15 55 15 52 35" fill="#FCA5B5" />
-    <path d="M 42 50 C 37 25 43 23 46 35" fill="#FFFFFF" />
-    <path d="M 58 50 C 63 25 57 23 54 35" fill="#FFFFFF" />
-    <circle cx="50" cy="65" r="26" fill="#FCA5B5" />
-    <path d="M 39 61 Q 43 56 46 61" fill="none" stroke="#5A4A4C" strokeWidth="3" strokeLinecap="round" />
-    <path d="M 54 61 Q 58 56 61 61" fill="none" stroke="#5A4A4C" strokeWidth="3" strokeLinecap="round" />
-    <circle cx="50" cy="67" r="2.5" fill="#FFFFFF" />
-    <path d="M 46 72 Q 50 76 54 72" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" />
-    <ellipse cx="36" cy="68" rx="4" ry="2.5" fill="#FFCADA" />
-    <ellipse cx="64" cy="68" rx="4" ry="2.5" fill="#FFCADA" />
-  </svg>
+  <img 
+    src={bunnyAvatar} 
+    alt="Bunny Assistant" 
+    style={{ width: '65px', height: '65px', borderRadius: '50%', objectFit: 'cover' }} 
+  />
 );
 
 // --- COMPONENT THẺ NÚT CHÍNH (Đã thêm thuộc tính onClick) ---

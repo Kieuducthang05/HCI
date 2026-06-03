@@ -42,6 +42,10 @@ body.dark-mode {
     background: #faf9f6;
     font-family: var(--sans);
     overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .child-topbar {

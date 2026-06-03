@@ -4,20 +4,14 @@ import { FiArrowLeft } from 'react-icons/fi'
 import { chatbotApi, getSelectedChild, preferencesApi, trackingApi } from '../services/api'
 import '../styles/ChildChat.css'
 
+import bunnyAvatar from '../assets/bunny-avatar.png'
+
 const BunnyIcon = () => (
-  <svg width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <path d="M 40 55 C 32 15 45 15 48 35" fill="#FCA5B5" />
-    <path d="M 60 55 C 68 15 55 15 52 35" fill="#FCA5B5" />
-    <path d="M 42 50 C 37 25 43 23 46 35" fill="#FFFFFF" />
-    <path d="M 58 50 C 63 25 57 23 54 35" fill="#FFFFFF" />
-    <circle cx="50" cy="65" r="26" fill="#FCA5B5" />
-    <path d="M 39 61 Q 43 56 46 61" fill="none" stroke="#5A4A4C" strokeWidth="3" strokeLinecap="round" />
-    <path d="M 54 61 Q 58 56 61 61" fill="none" stroke="#5A4A4C" strokeWidth="3" strokeLinecap="round" />
-    <circle cx="50" cy="67" r="2.5" fill="#FFFFFF" />
-    <path d="M 46 72 Q 50 76 54 72" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" />
-    <ellipse cx="36" cy="68" rx="4" ry="2.5" fill="#FFCADA" />
-    <ellipse cx="64" cy="68" rx="4" ry="2.5" fill="#FFCADA" />
-  </svg>
+  <img 
+    src={bunnyAvatar} 
+    alt="Bunny Assistant" 
+    style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
+  />
 )
 
 function formatParentAlertReason(alert) {
@@ -294,7 +288,7 @@ export default function ChildChat() {
           </div>
           <div className="chat-header-copy">
             <h2>Thỏ</h2>
-            <p>Trợ lý ảo của em 🐰</p>
+            <p>Trợ lý ảo của em</p>
           </div>
         </div>
       </div>

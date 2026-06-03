@@ -181,7 +181,7 @@
 }
 
 .bunny-avatar {
-  background: linear-gradient(135deg, #FCA5B5 0%, #F06292 100%);
+  background: transparent;
 }
 
 .message-content {
