@@ -187,7 +187,13 @@ export default function ParentShop() {
               aria-haspopup="listbox"
               aria-expanded={dropdownOpen}
             >
-              <span className="child-badge-avatar">🧒</span>
+              <span className={`child-badge-avatar ${children.find((c) => c.id === childId)?.avatar_url ? 'has-img' : ''}`}>
+                {children.find((c) => c.id === childId)?.avatar_url ? (
+                  <img src={children.find((c) => c.id === childId).avatar_url} alt="" className="avatar-image" />
+                ) : (
+                  '🧒'
+                )}
+              </span>
               <span className="child-badge-name">
                 Bé {children.find((c) => c.id === childId)?.nickname || '...'}
               </span>
@@ -208,7 +214,13 @@ export default function ParentShop() {
                       setDropdownOpen(false)
                     }}
                   >
-                    <span className="item-avatar">🧒</span>
+                    <span className={`item-avatar ${child.avatar_url ? 'has-img' : ''}`}>
+                      {child.avatar_url ? (
+                        <img src={child.avatar_url} alt="" className="avatar-image" />
+                      ) : (
+                        '🧒'
+                      )}
+                    </span>
                     <span className="item-name">Bé {child.nickname}</span>
                   </button>
                 ))}

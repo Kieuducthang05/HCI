@@ -23,7 +23,9 @@ export type DeviceTokenResult = {
   updatedAt: string;
 };
 
-export async function registerDeviceToken(input: RegisterDeviceTokenInput): Promise<DeviceTokenResult> {
+export async function registerDeviceToken(
+  input: RegisterDeviceTokenInput,
+): Promise<DeviceTokenResult> {
   const userId = input.userId.trim();
   if (!userId || !isValidUuid(userId)) {
     throw new AppError("INVALID_USER_ID", "Invalid user ID format.", 400);

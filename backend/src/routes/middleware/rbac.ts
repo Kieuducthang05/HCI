@@ -43,4 +43,3 @@ export const requireActiveUser = new Elysia()
     }
     return { authUserId, authUser };
   });
-

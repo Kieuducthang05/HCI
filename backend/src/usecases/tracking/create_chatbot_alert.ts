@@ -92,7 +92,9 @@ async function dispatchWarningPush(parentId: string, childId: string, reason: st
   });
 
   if (tokens.length === 0) {
-    console.log(`[INFO] No active devices registered for parent ID: ${parentId}. Skipping push dispatch.`);
+    console.log(
+      `[INFO] No active devices registered for parent ID: ${parentId}. Skipping push dispatch.`,
+    );
     return {
       status: "NO_DEVICES" as const,
       notificationSentAt: null,

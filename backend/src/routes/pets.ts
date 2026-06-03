@@ -44,7 +44,7 @@ const protectedPetsRouter = new Elysia()
             status: pet.status,
             created_at: pet.createdAt,
             updated_at: pet.updatedAt,
-          }))
+          })),
         ),
         next_cursor: result.nextCursor,
       };
@@ -78,7 +78,7 @@ const protectedPetsRouter = new Elysia()
             status: childPet.pet.status,
             deleted_at: childPet.pet.deletedAt,
           },
-        }))
+        })),
       ),
     };
   })

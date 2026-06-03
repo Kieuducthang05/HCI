@@ -10,18 +10,15 @@ function readBearerToken(authorizationHeader: string | undefined): string {
   return match[1].trim();
 }
 
-export const requireAuth = new Elysia().resolve(
-  { as: "scoped" },
-  async ({ headers }) => {
-    const sessionToken = readBearerToken(headers["authorization"]);
-    const session = await getCurrentSession(sessionToken);
+export const requireAuth = new Elysia().resolve({ as: "scoped" }, async ({ headers }) => {
+  const sessionToken = readBearerToken(headers["authorization"]);
+  const session = await getCurrentSession(sessionToken);
 
-    return {
-      authSessionId: session.sessionId,
-      authSessionToken: sessionToken,
-      authSessionExpiresAt: session.expiresAt,
-      authUserId: session.user.id,
-      authUser: session.user,
-    };
-  },
-);
+  return {
+    authSessionId: session.sessionId,
+    authSessionToken: sessionToken,
+    authSessionExpiresAt: session.expiresAt,
+    authUserId: session.user.id,
+    authUser: session.user,
+  };
+});

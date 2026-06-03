@@ -1,6 +1,12 @@
 import { eq, and, desc, exists, gt, gte, lte, lt, isNull, sql, type SQL } from "drizzle-orm";
 import type { DbExecutor } from "../client";
-import { contents, contentSessions, childProfiles, unlockContent, starTransactions } from "../schema";
+import {
+  contents,
+  contentSessions,
+  childProfiles,
+  unlockContent,
+  starTransactions,
+} from "../schema";
 import { randomUUID } from "crypto";
 import { MAX_CONTENT_COMPLETION_REWARD_STARS } from "../../domain/reward_policy.ts";
 

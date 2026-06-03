@@ -36,42 +36,24 @@ export type MediaAssetResult = {
 
 const maxFileBytes = 50 * 1024 * 1024; // 50 MB
 
-export async function createMediaAsset(
-  input: CreateMediaAssetInput,
-): Promise<MediaAssetResult> {
+export async function createMediaAsset(input: CreateMediaAssetInput): Promise<MediaAssetResult> {
   const adminId = input.adminId.trim();
   if (!adminId) {
-    throw new AppError<CreateMediaAssetErrorType>(
-      "MISSING_ADMIN_ID",
-      "Admin ID is required.",
-      400,
-    );
+    throw new AppError<CreateMediaAssetErrorType>("MISSING_ADMIN_ID", "Admin ID is required.", 400);
   }
 
   const fileName = input.fileName.trim();
   if (!fileName) {
-    throw new AppError<CreateMediaAssetErrorType>(
-      "MISSING_FILE",
-      "File name is required.",
-      400,
-    );
+    throw new AppError<CreateMediaAssetErrorType>("MISSING_FILE", "File name is required.", 400);
   }
 
   const purpose = input.purpose.trim();
   if (!purpose) {
-    throw new AppError<CreateMediaAssetErrorType>(
-      "INVALID_PURPOSE",
-      "Purpose is required.",
-      400,
-    );
+    throw new AppError<CreateMediaAssetErrorType>("INVALID_PURPOSE", "Purpose is required.", 400);
   }
 
   if (input.sizeBytes <= 0 || input.buffer.byteLength === 0) {
-    throw new AppError<CreateMediaAssetErrorType>(
-      "MISSING_FILE",
-      "File cannot be empty.",
-      400,
-    );
+    throw new AppError<CreateMediaAssetErrorType>("MISSING_FILE", "File cannot be empty.", 400);
   }
 
   if (input.sizeBytes > maxFileBytes || input.buffer.byteLength > maxFileBytes) {
@@ -138,10 +120,6 @@ export async function createMediaAsset(
     };
   } catch (error: unknown) {
     console.error("[ERROR] Unexpected error in createMediaAsset use case:", error);
-    throw new AppError<CreateMediaAssetErrorType>(
-      "INTERNAL_ERROR",
-      "Internal server error.",
-      500,
-    );
+    throw new AppError<CreateMediaAssetErrorType>("INTERNAL_ERROR", "Internal server error.", 500);
   }
 }

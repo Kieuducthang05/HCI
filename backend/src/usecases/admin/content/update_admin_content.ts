@@ -1,5 +1,8 @@
 import { withTx, db } from "../../../db/client.ts";
-import { getAdminContentDetailRow, updateAdminContentRow } from "../../../db/queries/admin_content_queries.ts";
+import {
+  getAdminContentDetailRow,
+  updateAdminContentRow,
+} from "../../../db/queries/admin_content_queries.ts";
 import { AppError } from "../../app_error.ts";
 import { normalizeAdminId, requireActiveAdmin } from "../admin_authorization.ts";
 import { toContentResult, type ContentResult } from "../../content/content_models.ts";
@@ -114,11 +117,16 @@ export async function updateAdminContent(input: UpdateAdminContentInput): Promis
     }
 
     const currentAnswerEmotions = input.quiz.answerEmotions ?? existing.quiz?.answerEmotions ?? [];
-    const currentCorrectEmotion = input.quiz.correctEmotion?.trim() ?? existing.quiz?.correctEmotion;
+    const currentCorrectEmotion =
+      input.quiz.correctEmotion?.trim() ?? existing.quiz?.correctEmotion;
 
     if (input.quiz.answerEmotions !== undefined) {
       if (!Array.isArray(input.quiz.answerEmotions) || input.quiz.answerEmotions.length === 0) {
-        throw new AppError("INVALID_ANSWER_EMOTIONS", "Answer emotions must be a non-empty array.", 400);
+        throw new AppError(
+          "INVALID_ANSWER_EMOTIONS",
+          "Answer emotions must be a non-empty array.",
+          400,
+        );
       }
       typeData.answerEmotions = input.quiz.answerEmotions;
     }
@@ -131,7 +139,11 @@ export async function updateAdminContent(input: UpdateAdminContentInput): Promis
     }
 
     if (currentCorrectEmotion && !currentAnswerEmotions.includes(currentCorrectEmotion)) {
-      throw new AppError("INVALID_CORRECT_EMOTION", "Correct emotion must be present in answer emotions.", 400);
+      throw new AppError(
+        "INVALID_CORRECT_EMOTION",
+        "Correct emotion must be present in answer emotions.",
+        400,
+      );
     }
   } else if (existing.type === "GAME" && input.game) {
     if (input.game.targetEmotion !== undefined) {
@@ -161,14 +173,24 @@ export async function updateAdminContent(input: UpdateAdminContentInput): Promis
     if (input.game.unlockStarCost !== undefined) {
       const unlockStarCost = input.game.unlockStarCost;
       if (!Number.isInteger(unlockStarCost) || unlockStarCost < 0) {
-        throw new AppError("INVALID_STAR_COST", "Unlock star cost must be a non-negative integer.", 400);
+        throw new AppError(
+          "INVALID_STAR_COST",
+          "Unlock star cost must be a non-negative integer.",
+          400,
+        );
       }
       typeData.unlockStarCost = unlockStarCost;
     }
     if (input.game.promptAssetType !== undefined) {
-      const promptAssetType = input.game.promptAssetType ? input.game.promptAssetType.trim().toUpperCase() : null;
+      const promptAssetType = input.game.promptAssetType
+        ? input.game.promptAssetType.trim().toUpperCase()
+        : null;
       if (promptAssetType && !["ICON", "IMAGE", "VIDEO"].includes(promptAssetType)) {
-        throw new AppError("INVALID_PROMPT_ASSET_TYPE", "Prompt asset type must be ICON, IMAGE, or VIDEO.", 400);
+        throw new AppError(
+          "INVALID_PROMPT_ASSET_TYPE",
+          "Prompt asset type must be ICON, IMAGE, or VIDEO.",
+          400,
+        );
       }
       typeData.promptAssetType = promptAssetType;
     }

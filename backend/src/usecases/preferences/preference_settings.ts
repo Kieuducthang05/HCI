@@ -24,7 +24,14 @@ const allowedPreferenceKeys = new Set([
   "regulation",
 ]);
 
-const allowedRegulationKeys = new Set(["method", "contact", "alertAfter", "alert_after", "quietMode", "quiet_mode"]);
+const allowedRegulationKeys = new Set([
+  "method",
+  "contact",
+  "alertAfter",
+  "alert_after",
+  "quietMode",
+  "quiet_mode",
+]);
 const allowedRegulationMethods = new Set(["breathing", "quiet", "music", "parent"]);
 const allowedRegulationAlertAfter = new Set(["60", "120"]);
 
@@ -119,7 +126,11 @@ function normalizeOptionalString<T extends string>(
   }
 
   const normalizedValue = value.trim().replace(/\s+/g, " ");
-  if (!normalizedValue || normalizedValue.length > maxLength || /[\u0000-\u001f\u007f]/.test(normalizedValue)) {
+  if (
+    !normalizedValue ||
+    normalizedValue.length > maxLength ||
+    /[\u0000-\u001f\u007f]/.test(normalizedValue)
+  ) {
     throwInvalid(
       errorType,
       `${fieldName} must be a non-empty string of ${maxLength} characters or fewer.`,
@@ -153,7 +164,12 @@ function normalizeRegulationSettings<T extends string>(
   }
 
   if ("contact" in input && input.contact !== undefined) {
-    regulation.contact = normalizeOptionalString(input.contact, errorType, "regulation.contact", 80);
+    regulation.contact = normalizeOptionalString(
+      input.contact,
+      errorType,
+      "regulation.contact",
+      80,
+    );
   }
 
   const alertAfter = getStoredValue(input, "alertAfter", "alert_after");

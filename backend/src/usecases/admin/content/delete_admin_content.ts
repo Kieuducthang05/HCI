@@ -1,5 +1,8 @@
 import { db } from "../../../db/client.ts";
-import { getAdminContentDetailRow, softDeleteAdminContentRow } from "../../../db/queries/admin_content_queries.ts";
+import {
+  getAdminContentDetailRow,
+  softDeleteAdminContentRow,
+} from "../../../db/queries/admin_content_queries.ts";
 import { AppError } from "../../app_error.ts";
 import { normalizeAdminId, requireActiveAdmin } from "../admin_authorization.ts";
 import { isValidUuid } from "../../../utils/validation.ts";

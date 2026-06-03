@@ -51,10 +51,7 @@ async function resolveConfigMedia(value: unknown): Promise<unknown> {
 
   const result: Record<string, unknown> = {};
   for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
-    if (
-      typeof item === "string" &&
-      ["imageUrl", "promptImageUrl", "src"].includes(key)
-    ) {
+    if (typeof item === "string" && ["imageUrl", "promptImageUrl", "src"].includes(key)) {
       result[key] = await resolveMediaUrl(item);
     } else {
       result[key] = await resolveConfigMedia(item);
@@ -68,9 +65,7 @@ async function formatContent(content: ContentResult) {
   const lectureMediaUrl = await resolveMediaUrl(content.lecture?.mediaUrl ?? null);
   const quizMediaUrl = await resolveMediaUrl(content.quiz?.mediaUrl ?? null);
   const gamePromptAssetUrl = await resolveMediaUrl(content.game?.promptAssetUrl ?? null);
-  const gameConfig = content.game
-    ? await resolveConfigMedia(content.game.config ?? {})
-    : {};
+  const gameConfig = content.game ? await resolveConfigMedia(content.game.config ?? {}) : {};
 
   return {
     id: content.id,

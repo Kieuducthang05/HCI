@@ -41,8 +41,18 @@ const MAX_LIMIT = 100;
 export async function listChildContentSessions(
   input: ListChildContentSessionsInput,
 ): Promise<{ sessions: ContentSessionResult[]; nextCursor: string | null }> {
-  const parentId = normalizeUseCaseUuid(input.parentId, "MISSING_PARENT_ID", "INVALID_PARENT_ID", "Parent ID");
-  const childId = normalizeUseCaseUuid(input.childId, "MISSING_CHILD_ID", "INVALID_CHILD_ID", "Child ID");
+  const parentId = normalizeUseCaseUuid(
+    input.parentId,
+    "MISSING_PARENT_ID",
+    "INVALID_PARENT_ID",
+    "Parent ID",
+  );
+  const childId = normalizeUseCaseUuid(
+    input.childId,
+    "MISSING_CHILD_ID",
+    "INVALID_CHILD_ID",
+    "Child ID",
+  );
 
   let limit = DEFAULT_LIMIT;
   if (input.limit !== undefined) {

@@ -251,7 +251,10 @@ export async function recordContentSession(
   const startedAt = normalizeOptionalDate(input.startedAt, "INVALID_STARTED_AT");
   const completedAt = normalizeOptionalDate(input.completedAt, "INVALID_COMPLETED_AT");
   const metadata = normalizeJsonMetadata(input.metadata, "INVALID_METADATA");
-  const aiScores = normalizeJsonMetadata(input.aiScores, "INVALID_METADATA") as Record<string, number> | null;
+  const aiScores = normalizeJsonMetadata(input.aiScores, "INVALID_METADATA") as Record<
+    string,
+    number
+  > | null;
 
   if (startedAt !== undefined && completedAt !== undefined && completedAt < startedAt) {
     throw new AppError<RecordContentSessionErrorType>(
@@ -304,7 +307,7 @@ export async function recordContentSession(
       }
     } else if (content.type === "GAME") {
       if (!content.game) throw new Error("Game content structure missing.");
-      
+
       const gameSuccess = isGameSessionSuccessful(content.game.targetEmotion, {
         isCorrect: input.isCorrect,
         aiMatchScore: input.aiMatchScore,

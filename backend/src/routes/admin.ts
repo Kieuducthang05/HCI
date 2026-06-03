@@ -81,13 +81,41 @@ async function resolveConfigMedia(value: unknown): Promise<unknown> {
   return result;
 }
 
-function formatPet(pet: PetCatalogResult) {
+function extractMediaKey(value: string | null | undefined): string | null | undefined {
+  if (!value) return value;
+  const match = value.match(/media-assets\/[^?#]+/);
+  if (match) {
+    return match[0];
+  }
+  return value;
+}
+
+function cleanConfigMedia(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => cleanConfigMedia(item));
+  }
+
+  if (!value || typeof value !== "object") return value;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof item === "string" && ["imageUrl", "promptImageUrl", "src"].includes(key)) {
+      result[key] = extractMediaKey(item);
+    } else {
+      result[key] = cleanConfigMedia(item);
+    }
+  }
+
+  return result;
+}
+
+async function formatPet(pet: PetCatalogResult) {
   return {
     id: pet.id,
     name: pet.name,
     description: pet.description,
-    image_url: pet.imageUrl,
-    animation_url: pet.animationUrl,
+    image_url: await resolveMediaUrl(pet.imageUrl),
+    animation_url: await resolveMediaUrl(pet.animationUrl),
     unlock_star_cost: pet.unlockStarCost,
     status: pet.status,
     created_at: pet.createdAt,
@@ -97,9 +125,7 @@ function formatPet(pet: PetCatalogResult) {
 }
 
 async function formatContent(content: any) {
-  const gameConfig = content.game
-    ? await resolveConfigMedia(content.game.config ?? {})
-    : {};
+  const gameConfig = content.game ? await resolveConfigMedia(content.game.config ?? {}) : {};
 
   return {
     id: content.id,
@@ -114,7 +140,7 @@ async function formatContent(content: any) {
     unlock_star_cost: content.unlockStarCost,
     lecture: content.lecture
       ? {
-          media_url: content.lecture.mediaUrl,
+          media_url: await resolveMediaUrl(content.lecture.mediaUrl),
           description: content.lecture.description,
           difficulty_level: content.lecture.difficultyLevel,
           is_default: content.lecture.isDefault,
@@ -122,7 +148,7 @@ async function formatContent(content: any) {
       : null,
     quiz: content.quiz
       ? {
-          media_url: content.quiz.mediaUrl,
+          media_url: await resolveMediaUrl(content.quiz.mediaUrl),
           description: content.quiz.description,
           difficulty_level: content.quiz.difficultyLevel,
           is_default: content.quiz.isDefault,
@@ -138,7 +164,7 @@ async function formatContent(content: any) {
           is_default: content.game.isDefault,
           unlock_star_cost: content.game.unlockStarCost,
           prompt_asset_type: content.game.promptAssetType,
-          prompt_asset_url: content.game.promptAssetUrl,
+          prompt_asset_url: await resolveMediaUrl(content.game.promptAssetUrl),
           config: gameConfig,
         }
       : null,
@@ -235,7 +261,7 @@ const protectedAdminRouter = new Elysia()
 
       set.status = 200;
       return {
-        pets: result.pets.map(formatPet),
+        pets: await Promise.all(result.pets.map(formatPet)),
         next_cursor: result.nextCursor,
       };
     },
@@ -255,8 +281,8 @@ const protectedAdminRouter = new Elysia()
         adminId: authUserId,
         name: body.name,
         description: body.description,
-        imageUrl: body.image_url,
-        animationUrl: body.animation_url,
+        imageUrl: extractMediaKey(body.image_url)!,
+        animationUrl: extractMediaKey(body.animation_url),
         unlockStarCost: body.unlock_star_cost,
         status: body.status,
       });
@@ -264,7 +290,7 @@ const protectedAdminRouter = new Elysia()
       set.status = 201;
       return {
         message: "Pet catalog item created successfully.",
-        pet: formatPet(pet),
+        pet: await formatPet(pet),
       };
     },
     {
@@ -286,8 +312,8 @@ const protectedAdminRouter = new Elysia()
         petId: params.petId,
         name: body.name,
         description: body.description,
-        imageUrl: body.image_url,
-        animationUrl: body.animation_url,
+        imageUrl: extractMediaKey(body.image_url) ?? undefined,
+        animationUrl: extractMediaKey(body.animation_url) ?? undefined,
         unlockStarCost: body.unlock_star_cost,
         status: body.status,
       });
@@ -295,7 +321,7 @@ const protectedAdminRouter = new Elysia()
       set.status = 200;
       return {
         message: "Pet catalog item updated successfully.",
-        pet: formatPet(pet),
+        pet: await formatPet(pet),
       };
     },
     {
@@ -467,9 +493,25 @@ const protectedAdminRouter = new Elysia()
         title: body.title,
         type: body.type,
         status: body.status,
-        lecture: body.lecture,
-        quiz: body.quiz,
-        game: body.game,
+        lecture: body.lecture
+          ? {
+              ...body.lecture,
+              mediaUrl: extractMediaKey(body.lecture.mediaUrl) ?? undefined,
+            }
+          : undefined,
+        quiz: body.quiz
+          ? {
+              ...body.quiz,
+              mediaUrl: extractMediaKey(body.quiz.mediaUrl) ?? undefined,
+            }
+          : undefined,
+        game: body.game
+          ? {
+              ...body.game,
+              promptAssetUrl: extractMediaKey(body.game.promptAssetUrl) ?? undefined,
+              config: cleanConfigMedia(body.game.config) as any,
+            }
+          : undefined,
       });
 
       set.status = 201;
@@ -489,7 +531,7 @@ const protectedAdminRouter = new Elysia()
             description: t.Optional(t.Union([t.String(), t.Null()])),
             difficultyLevel: t.Optional(t.Number()),
             isDefault: t.Optional(t.Boolean()),
-          })
+          }),
         ),
         quiz: t.Optional(
           t.Object({
@@ -499,7 +541,7 @@ const protectedAdminRouter = new Elysia()
             isDefault: t.Optional(t.Boolean()),
             answerEmotions: t.Array(t.String()),
             correctEmotion: t.String(),
-          })
+          }),
         ),
         game: t.Optional(
           t.Object({
@@ -511,7 +553,7 @@ const protectedAdminRouter = new Elysia()
             promptAssetType: t.Optional(t.Union([t.String(), t.Null()])),
             promptAssetUrl: t.Optional(t.Union([t.String(), t.Null()])),
             config: t.Optional(t.Union([gameConfigSchema, t.Null()])),
-          })
+          }),
         ),
       }),
     },
@@ -543,9 +585,25 @@ const protectedAdminRouter = new Elysia()
         contentId: params.contentId,
         title: body.title,
         status: body.status,
-        lecture: body.lecture,
-        quiz: body.quiz,
-        game: body.game,
+        lecture: body.lecture
+          ? {
+              ...body.lecture,
+              mediaUrl: extractMediaKey(body.lecture.mediaUrl) ?? undefined,
+            }
+          : undefined,
+        quiz: body.quiz
+          ? {
+              ...body.quiz,
+              mediaUrl: extractMediaKey(body.quiz.mediaUrl) ?? undefined,
+            }
+          : undefined,
+        game: body.game
+          ? {
+              ...body.game,
+              promptAssetUrl: extractMediaKey(body.game.promptAssetUrl) ?? undefined,
+              config: cleanConfigMedia(body.game.config) as any,
+            }
+          : undefined,
       });
 
       set.status = 200;
@@ -567,7 +625,7 @@ const protectedAdminRouter = new Elysia()
             description: t.Optional(t.Union([t.String(), t.Null()])),
             difficultyLevel: t.Optional(t.Number()),
             isDefault: t.Optional(t.Boolean()),
-          })
+          }),
         ),
         quiz: t.Optional(
           t.Object({
@@ -577,7 +635,7 @@ const protectedAdminRouter = new Elysia()
             isDefault: t.Optional(t.Boolean()),
             answerEmotions: t.Optional(t.Array(t.String())),
             correctEmotion: t.Optional(t.String()),
-          })
+          }),
         ),
         game: t.Optional(
           t.Object({
@@ -589,7 +647,7 @@ const protectedAdminRouter = new Elysia()
             promptAssetType: t.Optional(t.Union([t.String(), t.Null()])),
             promptAssetUrl: t.Optional(t.Union([t.String(), t.Null()])),
             config: t.Optional(t.Union([gameConfigSchema, t.Null()])),
-          })
+          }),
         ),
       }),
     },

@@ -29,7 +29,9 @@ export type ListActivePetsResult = {
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
-export async function listActivePets(input: ListActivePetsInput = {}): Promise<ListActivePetsResult> {
+export async function listActivePets(
+  input: ListActivePetsInput = {},
+): Promise<ListActivePetsResult> {
   let limit = DEFAULT_LIMIT;
   if (input.limit !== undefined) {
     if (!Number.isInteger(input.limit) || input.limit < 1 || input.limit > MAX_LIMIT) {

@@ -1,5 +1,4 @@
 services:
-
   # ── 1. Chatbot API (Bạn thỏ) ─────────────────────────────────────────────
   chatbot:
     build: ./chatbot
@@ -16,7 +15,13 @@ services:
       - LLM2_MODEL=${LLM2_MODEL:-llama-3.1-8b-instant}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5).read()"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5).read()",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -35,7 +40,13 @@ services:
       - DROPOUT=${DROPOUT:-0.35}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/health', timeout=5).read()"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:9000/health', timeout=5).read()",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

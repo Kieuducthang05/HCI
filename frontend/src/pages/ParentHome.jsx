@@ -285,7 +285,13 @@ export default function ParentHome() {
             aria-haspopup="listbox"
             aria-expanded={dropdownOpen}
           >
-            <span className="child-badge-avatar">🧒</span>
+            <span className={`child-badge-avatar ${currentChild?.avatar_url ? 'has-img' : ''}`}>
+              {currentChild?.avatar_url ? (
+                <img src={currentChild.avatar_url} alt="" className="avatar-image" />
+              ) : (
+                '🧒'
+              )}
+            </span>
             <span className="child-badge-name">Bé {currentChild?.nickname || '...'}</span>
             <span className={`dropdown-chevron ${dropdownOpen ? 'open' : ''}`}>▼</span>
           </button>
@@ -304,7 +310,13 @@ export default function ParentHome() {
                     setDropdownOpen(false)
                   }}
                 >
-                  <span className="item-avatar">🧒</span>
+                  <span className={`item-avatar ${child.avatar_url ? 'has-img' : ''}`}>
+                    {child.avatar_url ? (
+                      <img src={child.avatar_url} alt="" className="avatar-image" />
+                    ) : (
+                      '🧒'
+                    )}
+                  </span>
                   <span className="item-name">Bé {child.nickname}</span>
                 </button>
               ))}

@@ -10,7 +10,9 @@ export type GetAdminContentDetailInput = {
   contentId: string;
 };
 
-export async function getAdminContentDetail(input: GetAdminContentDetailInput): Promise<ContentResult> {
+export async function getAdminContentDetail(
+  input: GetAdminContentDetailInput,
+): Promise<ContentResult> {
   const adminId = normalizeAdminId(input.adminId);
   await requireActiveAdmin(adminId);
 

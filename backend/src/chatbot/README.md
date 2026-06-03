@@ -1,4 +1,3 @@
-
 ## Bước 1 – Build và chạy
 
 ```bash
@@ -19,9 +18,11 @@ docker compose logs -f
 ### Chatbot (port 8080)
 
 #### `GET /health`
+
 Kiểm tra service.
 
 #### `POST /chat`
+
 ```json
 // Request body
 {
@@ -44,12 +45,15 @@ Kiểm tra service.
 ### Model Server (port 8001)
 
 #### `GET /health`
+
 Kiểm tra service và trạng thái model.
 
 #### `GET /model/info`
+
 Trả về metadata (tên file, dung lượng, nhãn cảm xúc, link tải).
 
 #### `GET /model/download`
+
 **Tải thẳng file .pt về máy.**
 
 ```bash
@@ -61,6 +65,7 @@ http://localhost:8001/model/download
 ```
 
 #### `POST /model/predict`
+
 Nhận ảnh khuôn mặt, trả về cảm xúc.
 
 ```bash

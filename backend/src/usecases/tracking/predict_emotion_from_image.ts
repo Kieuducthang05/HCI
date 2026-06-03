@@ -5,10 +5,7 @@ import {
   type InternalEmotionValue,
 } from "../../domain/ai_inference.ts";
 import { AppError } from "../app_error.ts";
-import {
-  normalizeUseCaseUuid,
-  requireOwnedActiveParentChild,
-} from "../parent_child_access.ts";
+import { normalizeUseCaseUuid, requireOwnedActiveParentChild } from "../parent_child_access.ts";
 import { recordEmotionLog, type LogEmotionResult } from "./log_emotion.ts";
 
 export type PredictEmotionFromImageErrorType =

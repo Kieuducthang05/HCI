@@ -90,11 +90,19 @@ export async function createAdminContent(input: CreateAdminContentInput): Promis
     }
     const answerEmotions = input.quiz.answerEmotions || [];
     if (!Array.isArray(answerEmotions) || answerEmotions.length === 0) {
-      throw new AppError("INVALID_ANSWER_EMOTIONS", "Answer emotions must be a non-empty array.", 400);
+      throw new AppError(
+        "INVALID_ANSWER_EMOTIONS",
+        "Answer emotions must be a non-empty array.",
+        400,
+      );
     }
     const correctEmotion = input.quiz.correctEmotion?.trim();
     if (!correctEmotion || !answerEmotions.includes(correctEmotion)) {
-      throw new AppError("INVALID_CORRECT_EMOTION", "Correct emotion must be present in answer emotions.", 400);
+      throw new AppError(
+        "INVALID_CORRECT_EMOTION",
+        "Correct emotion must be present in answer emotions.",
+        400,
+      );
     }
 
     typeData = {
@@ -123,11 +131,19 @@ export async function createAdminContent(input: CreateAdminContentInput): Promis
     }
     const unlockStarCost = input.game.unlockStarCost ?? 0;
     if (!Number.isInteger(unlockStarCost) || unlockStarCost < 0) {
-      throw new AppError("INVALID_STAR_COST", "Unlock star cost must be a non-negative integer.", 400);
+      throw new AppError(
+        "INVALID_STAR_COST",
+        "Unlock star cost must be a non-negative integer.",
+        400,
+      );
     }
     const promptAssetType = input.game.promptAssetType?.trim().toUpperCase() || null;
     if (promptAssetType && !["ICON", "IMAGE", "VIDEO"].includes(promptAssetType)) {
-      throw new AppError("INVALID_PROMPT_ASSET_TYPE", "Prompt asset type must be ICON, IMAGE, or VIDEO.", 400);
+      throw new AppError(
+        "INVALID_PROMPT_ASSET_TYPE",
+        "Prompt asset type must be ICON, IMAGE, or VIDEO.",
+        400,
+      );
     }
 
     typeData = {

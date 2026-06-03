@@ -53,7 +53,11 @@ export async function updateAdminUser(input: UpdateAdminUserInput): Promise<Admi
   }
 
   if (Object.keys(updateData).length === 0) {
-    throw new AppError("MISSING_UPDATE_FIELDS", "At least one update field (status, role) is required.", 400);
+    throw new AppError(
+      "MISSING_UPDATE_FIELDS",
+      "At least one update field (status, role) is required.",
+      400,
+    );
   }
 
   try {

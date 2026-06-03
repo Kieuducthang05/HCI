@@ -1,6 +1,6 @@
 # HMI Backend
 
-Hệ thống Backend (phát triển bằng TypeScript/Bun) cho ứng dụng HMI (Hỗ trợ trẻ tự kỷ nhận diện cảm xúc). Backend này đóng vai trò cung cấp RESTful API cho ứng dụng frontend để thực hiện xác thực, quản lý dữ liệu, ghi nhận tiến độ học tập/cảm xúc và xem thống kê (dashboard). 
+Hệ thống Backend (phát triển bằng TypeScript/Bun) cho ứng dụng HMI (Hỗ trợ trẻ tự kỷ nhận diện cảm xúc). Backend này đóng vai trò cung cấp RESTful API cho ứng dụng frontend để thực hiện xác thực, quản lý dữ liệu, ghi nhận tiến độ học tập/cảm xúc và xem thống kê (dashboard).
 
 Cơ sở dữ liệu được quản lý bằng PostgreSQL (với Drizzle ORM) và các tệp tĩnh (như avatar trẻ, media bài học, pet) được lưu trữ qua MinIO/AWS S3.
 
@@ -16,23 +16,28 @@ Cơ sở dữ liệu được quản lý bằng PostgreSQL (với Drizzle ORM) v
 ## Hướng dẫn chạy (Run Instructions)
 
 ### Yêu cầu hệ thống (Prerequisites)
+
 - [Docker](https://www.docker.com/) và Docker Compose
 - [Bun](https://bun.sh/) (Runtime để cài đặt dependencies và format code)
 
 ### Cài đặt và khởi chạy
 
 1. Copy file cấu hình môi trường mẫu:
+
    ```bash
    cp .env.example .env
    ```
-   *(Bạn có thể cấu hình các thông số TextBee SMS, S3, PostgreSQL,... bên trong file `.env` nếu cần).*
+
+   _(Bạn có thể cấu hình các thông số TextBee SMS, S3, PostgreSQL,... bên trong file `.env` nếu cần)._
 
 2. Cài đặt các package dependencies:
+
    ```bash
    bun install
    ```
 
 3. Khởi động toàn bộ hệ thống (PostgreSQL, MinIO/S3 và API Server) bằng Docker Compose:
+
    ```bash
    docker compose up --build
    ```
@@ -50,6 +55,7 @@ Cơ sở dữ liệu được quản lý bằng PostgreSQL (với Drizzle ORM) v
 ### Các lệnh hữu ích (Scripts)
 
 Format toàn bộ mã nguồn và tài liệu trong project:
+
 ```bash
 bun fmt
 ```
@@ -62,4 +68,4 @@ bun fmt
 
 ---
 
-*Lưu ý: Đối với tính năng Push Notification (nhận Cảnh báo Chatbot), bạn cần cung cấp file `firebase_adminsdk.json` từ Firebase Console và đặt ở thư mục gốc của dự án. Nếu không có file này, hệ thống sẽ tự động chuyển sang chế độ mock (giả lập thông báo ra console log).*
+_Lưu ý: Đối với tính năng Push Notification (nhận Cảnh báo Chatbot), bạn cần cung cấp file `firebase_adminsdk.json` từ Firebase Console và đặt ở thư mục gốc của dự án. Nếu không có file này, hệ thống sẽ tự động chuyển sang chế độ mock (giả lập thông báo ra console log)._

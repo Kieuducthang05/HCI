@@ -109,20 +109,11 @@ export async function updateAdminContentRow(
 
   if (Object.keys(typeData).length > 0) {
     if (current.type === "LECTURE") {
-      await db
-        .update(lectures)
-        .set(typeData)
-        .where(eq(lectures.id, contentId));
+      await db.update(lectures).set(typeData).where(eq(lectures.id, contentId));
     } else if (current.type === "QUIZ") {
-      await db
-        .update(quizzes)
-        .set(typeData)
-        .where(eq(quizzes.id, contentId));
+      await db.update(quizzes).set(typeData).where(eq(quizzes.id, contentId));
     } else if (current.type === "GAME") {
-      await db
-        .update(game)
-        .set(typeData)
-        .where(eq(game.id, contentId));
+      await db.update(game).set(typeData).where(eq(game.id, contentId));
     }
   }
 

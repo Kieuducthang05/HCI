@@ -21,9 +21,10 @@ const protectedChildrenRouter = new Elysia()
           }
         : undefined;
 
-      const webcamConsent = body.webcam_consent !== undefined
-        ? (body.webcam_consent === "true" || body.webcam_consent === true)
-        : undefined;
+      const webcamConsent =
+        body.webcam_consent !== undefined
+          ? body.webcam_consent === "true" || body.webcam_consent === true
+          : undefined;
 
       const child = await createChildProfile({
         parentId: authUserId,
@@ -121,9 +122,10 @@ const protectedChildrenRouter = new Elysia()
           }
         : undefined;
 
-      const webcamConsent = body.webcam_consent !== undefined
-        ? (body.webcam_consent === "true" || body.webcam_consent === true)
-        : undefined;
+      const webcamConsent =
+        body.webcam_consent !== undefined
+          ? body.webcam_consent === "true" || body.webcam_consent === true
+          : undefined;
 
       const child = await updateChildProfile({
         parentId: authUserId,

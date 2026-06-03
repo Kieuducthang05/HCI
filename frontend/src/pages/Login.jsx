@@ -52,6 +52,7 @@ export default function Login() {
         width: googleButtonRef.current.offsetWidth || 360,
         text: 'signin_with',
         locale: 'vi',
+        shape: 'pill',
       })
     }
 
