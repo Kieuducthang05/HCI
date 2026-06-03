@@ -370,21 +370,23 @@ export default function ChildLearn() {
 
           <div className="lesson-navigation">
             {hasMultipleLecturePages && (
-              <button className="nav-btn" onClick={handlePrev} disabled={currentIndex === 0}>
+              <button className="nav-btn nav-btn-prev" onClick={handlePrev} disabled={currentIndex === 0}>
                 <FiArrowLeft className="nav-btn-icon" aria-hidden="true" />
                 <span>Trước</span>
               </button>
             )}
 
-            <div className="progress">
-              <span className="progress-text">{currentIndex + 1} / {tabContents.length}</span>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${((currentIndex + 1) / tabContents.length) * 100}%` }}></div>
+            <div className="game-step-progress" aria-label={`Trang ${currentIndex + 1}/${tabContents.length}`}>
+              <div className="game-step-dashes">
+                {Array.from({ length: tabContents.length }).map((_, index) => (
+                  <span key={index} className={index <= currentIndex ? 'active' : ''}></span>
+                ))}
               </div>
+              <span>TRANG {currentIndex + 1}/{tabContents.length}</span>
             </div>
 
             {hasMultipleLecturePages && (
-              <button className="nav-btn" onClick={handleNext} disabled={currentIndex === tabContents.length - 1}>
+              <button className="nav-btn nav-btn-next" onClick={handleNext} disabled={currentIndex === tabContents.length - 1}>
                 <span>Tiếp</span>
                 <FiArrowRight className="nav-btn-icon" aria-hidden="true" />
               </button>

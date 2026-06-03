@@ -133,19 +133,17 @@
   background: #d1d5db;
 }
 
-/* ===== CURRENT SETTINGS OVERRIDES ===== */
-.child-account-item {
-  grid-template-columns: 220px repeat(3, 1fr) auto;
-}
-
 .delete-child-btn {
   border: 1px solid #fecaca;
   background: #fff1f2;
   color: #be123c;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 8px 16px;
   font-weight: 700;
   cursor: pointer;
+  justify-self: end;
+  width: fit-content;
+  min-width: 80px;
 }
 
 .delete-child-btn:hover {
@@ -252,7 +250,7 @@
 /* 🔥 FIX LAYOUT + HOVER XỊN */
 .child-account-item {
   display: grid;
-  grid-template-columns: 220px repeat(3, 1fr); /* chia đều */
+  grid-template-columns: 240px 1fr 1fr auto;
   align-items: center;
   gap: 20px;
   padding: 18px 24px;
@@ -393,7 +391,7 @@
   }
 
   .child-account-item {
-    grid-template-columns: 200px repeat(3, 1fr);
+    grid-template-columns: 200px 1fr 1fr auto;
     gap: 16px;
   }
 }
@@ -486,7 +484,7 @@
 
   .child-stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
     width: 100%;
   }
@@ -603,7 +601,7 @@
 
   .child-stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
     width: 100%;
   }
@@ -701,7 +699,8 @@
   }
 
   .child-stats {
-    grid-template-columns: repeat(3, 1fr);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 6px;
   }
 
@@ -715,30 +714,5 @@
 
   .stat-value {
     font-size: 12px;
-  }
-}
-
-/* ===== FINAL SETTINGS OVERRIDES ===== */
-.child-account-item {
-  grid-template-columns: 220px repeat(3, 1fr) auto;
-}
-
-@media (max-width: 1024px) {
-  .regulation-settings-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .new-child-form {
-    width: 100%;
-    flex-direction: column;
-  }
-
-  .new-child-form .text-input {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .child-account-item {
-    grid-template-columns: 1fr;
   }
 }

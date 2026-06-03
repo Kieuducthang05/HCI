@@ -24,7 +24,6 @@ function formatChild(child) {
     avatar: child.avatar_url || '🧒',
     usageHours: 0,
     starCount: child.total_stars || 0,
-    emotion: 'Theo dõi từ nhật ký',
   }
 }
 
@@ -499,10 +498,6 @@ export default function ParentSettings() {
                 <div className="stat-item">
                   <span className="stat-label">Tổng số sao</span>
                   <span className="stat-value">{child.starCount.toLocaleString()}</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-label">Cảm xúc</span>
-                  <span className="stat-value">{child.emotion}</span>
                 </div>
               </div>
 
