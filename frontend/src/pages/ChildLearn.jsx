@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
-import { FiArrowLeft, FiArrowRight, FiCheckCircle, FiPause, FiPlay } from 'react-icons/fi'
+import { useNavigate, useOutletContext } from 'react-router-dom'
+import { FiArrowLeft, FiCheckCircle, FiPause, FiPlay, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
 import { contentApi, getSelectedChild, setSelectedChild, trackingApi } from '../services/api'
 import { captureDetectedFace } from '../utils/faceCapture'
@@ -155,6 +155,7 @@ function hasVideoReachedCompletionPoint(video) {
 }
 
 export default function ChildLearn() {
+  const navigate = useNavigate()
   const { setUserStars } = useOutletContext()
   const selectedChild = getSelectedChild()
   const [contents, setContents] = useState([])
@@ -163,6 +164,10 @@ export default function ChildLearn() {
   const [lastOutcome, setLastOutcome] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const leaveLearnScreen = () => {
+    navigate('/child/home', { replace: true })
+  }
 
   useEffect(() => {
     if (!selectedChild?.id) {
@@ -361,20 +366,46 @@ export default function ChildLearn() {
 
       {!current ? (
         <div className="lesson-card">
+          <button 
+            onClick={leaveLearnScreen}
+            className="lesson-back-btn"
+            aria-label="Quay lại"
+          >
+            <FiArrowLeft size={18} />
+            <span>Quay lại</span>
+          </button>
           <h2>Chưa có nội dung bài học từ backend</h2>
           <p>Hãy tạo nội dung trong trang Admin hoặc chạy lại seed database.</p>
         </div>
       ) : (
         <div className="lesson-card lesson-lecture-card">
+          <button 
+            onClick={leaveLearnScreen}
+            className="lesson-back-btn"
+            aria-label="Quay lại"
+          >
+            <FiArrowLeft size={18} />
+            <span>Quay lại</span>
+          </button>
           <LectureContent key={current.id || currentIndex} content={current} onComplete={handleCompleteLecture} />
 
           <div className="lesson-navigation">
-            {hasMultipleLecturePages && (
-              <button className="nav-btn nav-btn-prev" onClick={handlePrev} disabled={currentIndex === 0}>
-                <FiArrowLeft className="nav-btn-icon" aria-hidden="true" />
-                <span>Trước</span>
+            {hasMultipleLecturePages ? (
+              <button 
+                className="nav-btn" 
+                onClick={handlePrev} 
+                disabled={currentIndex === 0}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <FiChevronLeft size={18} />
+                Trước
               </button>
-            )}
+            ) : <div />}
 
             <div className="game-step-progress" aria-label={`Trang ${currentIndex + 1}/${tabContents.length}`}>
               <div className="game-step-dashes">
@@ -385,12 +416,22 @@ export default function ChildLearn() {
               <span>TRANG {currentIndex + 1}/{tabContents.length}</span>
             </div>
 
-            {hasMultipleLecturePages && (
-              <button className="nav-btn nav-btn-next" onClick={handleNext} disabled={currentIndex === tabContents.length - 1}>
-                <span>Tiếp</span>
-                <FiArrowRight className="nav-btn-icon" aria-hidden="true" />
+            {hasMultipleLecturePages ? (
+              <button 
+                className="nav-btn" 
+                onClick={handleNext} 
+                disabled={currentIndex === tabContents.length - 1}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                Tiếp
+                <FiChevronRight size={18} />
               </button>
-            )}
+            ) : <div />}
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
-import { FiCheckCircle } from 'react-icons/fi'
+import { FiCheckCircle, FiArrowLeft, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
 import { contentApi, getSelectedChild, setSelectedChild } from '../services/api'
 import '../styles/Child.css'
@@ -356,6 +356,15 @@ export default function ChildQuestions() {
       )}
 
       <div className="lesson-card">
+        <button 
+          onClick={leaveQuestionScreen}
+          className="lesson-back-btn"
+          aria-label="Quay lại"
+        >
+          <FiArrowLeft size={18} />
+          <span>Quay lại</span>
+        </button>
+
         {error && <p className="camera-error">{error}</p>}
 
         {!current ? (
@@ -372,16 +381,44 @@ export default function ChildQuestions() {
             />
 
             <div className="lesson-navigation">
-              <button className="nav-btn" onClick={handlePrev} disabled={currentIndex === 0 || submittingAnswer}>Trước</button>
+              <button 
+                className="nav-btn" 
+                onClick={handlePrev} 
+                disabled={currentIndex === 0 || submittingAnswer}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <FiChevronLeft size={18} />
+                Trước
+              </button>
 
-              <div className="progress">
-                <span className="progress-text">{currentIndex + 1} / {questions.length}</span>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}></div>
+              <div className="game-step-progress" aria-label={`Question ${currentIndex + 1}/${questions.length}`}>
+                <div className="game-step-dashes">
+                  {Array.from({ length: questions.length }).map((_, index) => (
+                    <span key={index} className={index <= currentIndex ? 'active' : ''}></span>
+                  ))}
                 </div>
+                <span>CÂU HỎI {currentIndex + 1}/{questions.length}</span>
               </div>
 
-              <button className="nav-btn" onClick={handleNext} disabled={currentIndex === questions.length - 1 || submittingAnswer}>Tiếp</button>
+              <button 
+                className="nav-btn" 
+                onClick={handleNext} 
+                disabled={currentIndex === questions.length - 1 || submittingAnswer}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                Tiếp
+                <FiChevronRight size={18} />
+              </button>
             </div>
           </>
         )}

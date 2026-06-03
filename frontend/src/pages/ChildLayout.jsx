@@ -90,6 +90,9 @@ export default function ChildLayout() {
             {/* Top Bar with Stars */}
             {showTopbar && (
                 <div className="child-topbar">
+                    <div className="child-topbar-title">
+                        Không gian học tập của <b style={{ color: '#e5bc55' }}>{childDisplayName}</b>
+                    </div>
                     <nav className="child-top-nav">
                         {menuItems.map(item => (
                             <button
@@ -102,9 +105,6 @@ export default function ChildLayout() {
                             </button>
                         ))}
                     </nav>
-                    <div className="child-topbar-title">
-                        Không gian học tập của <b style={{ color: '#e5bc55' }}>{childDisplayName}</b>
-                    </div>
                     <div className="topbar-right">
                         <div className="star-display">
                             <span className="star-icon"><FaStar /></span>

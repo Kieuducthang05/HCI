@@ -116,22 +116,28 @@ export default function ChildEmotionRecognition() {
   return (
     <div className="child-emotion-recognition-page" style={{ 
       width: '100%', 
+      height: '100%',
       display: 'flex', 
+      alignItems: 'center',
       justifyContent: 'center', 
-      paddingTop: '40px' 
+      boxSizing: 'border-box'
     }}>
       <div style={{ 
-        backgroundColor: '#FDFDFD', 
-        width: '66vw',
-        height: '75vh',
-        borderRadius: '32px', 
+        backgroundColor: '#ffffff', 
+        width: '920px',
+        height: 'calc(100% - 24px)',
+        maxWidth: 'calc(100vw - 32px)',
+        maxHeight: 'calc(100svh - 122px)',
+        borderRadius: '28px', 
+        border: '1px solid rgba(255, 255, 255, 0.54)',
+        boxShadow: '0 22px 52px rgba(31, 35, 73, 0.26)',
         padding: '24px 32px 48px 32px',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        position: 'relative'
+        position: 'relative',
+        margin: '12px auto'
       }}>
         
         {/* Back Button */}
