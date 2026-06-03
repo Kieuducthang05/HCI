@@ -775,6 +775,11 @@ body.dark-mode {
     --game-color: #F57F17;
 }
 
+.game-card-emotion-recognition {
+    --game-card-bg: #E1F5FE;
+    --game-color: #0288D1;
+}
+
 .game-icon {
     position: relative;
     z-index: 1;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
-import { FiArrowLeft, FiHeart, FiSmile } from 'react-icons/fi'
+import { FiArrowLeft, FiHeart, FiSmile, FiCamera } from 'react-icons/fi'
 import { CorrectAnswer, IncorrectAnswer } from '../components/ResultScreen'
 import { contentApi, getSelectedChild, setSelectedChild, trackingApi, visionApi } from '../services/api'
 import { captureDetectedFace } from '../utils/faceCapture'
@@ -316,6 +316,11 @@ const gameOptions = [
     label: 'Game 2 - Chọn cách phản ứng',
     Icon: FiHeart,
   },
+  {
+    id: 'emotion-recognition',
+    label: 'Game 3 - Nhận diện cảm xúc',
+    Icon: FiCamera,
+  },
 ]
 
 export default function ChildGames() {
@@ -406,6 +411,11 @@ export default function ChildGames() {
     [currentGame, activeGameList, gameIndex],
   )
   const startGame = (gameId) => {
+    if (gameId === 'emotion-recognition') {
+      navigate('/child/emotion-recognition')
+      return
+    }
+
     if (!selectedChild?.id) {
       setContentError('Chưa chọn tài khoản trẻ nên chưa thể tải nội dung game.')
       return
@@ -630,7 +640,8 @@ export default function ChildGames() {
 
         <div className="games-grid">
           {gameOptions.map((game) => {
-            const unavailable = !selectedChild?.id || contentLoading || !configuredGames[game.id]?.length
+            const isLocalGame = game.id === 'emotion-recognition'
+            const unavailable = !selectedChild?.id || contentLoading || (!isLocalGame && !configuredGames[game.id]?.length)
 
             return (
               <button
@@ -835,6 +846,8 @@ export default function ChildGames() {
       selectedChild={selectedChild}
       feedbackOverlay={feedbackOverlay}
       onAnswer={handleGameAnswer}
+      submittingAnswer={submittingAnswer}
+      backToMenu={backToMenu}
     />
   )
 }
@@ -846,6 +859,8 @@ function ExpressionGame({
   selectedChild,
   feedbackOverlay,
   onAnswer,
+  submittingAnswer,
+  backToMenu,
 }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
@@ -915,16 +930,33 @@ function ExpressionGame({
       }
 
       const frame = await captureVideoFrame(videoRef.current)
-      const result = await trackingApi.predictEmotion(selectedChild.id, frame, {
-        targetEmotion: data.modelEmotion,
-      })
-      const prediction = result.prediction || {}
+      const visionResult = await visionApi.predict(frame)
+      const prediction = visionResult.prediction || visionResult
+      
       const detectedEmotion = getModelEmotionInfo(prediction.emotion)
       const confidence = Number(prediction.confidence || 0)
       const expressionCheck = prediction.expression_check
+      
+      const targetMapInfo = getModelEmotionInfo(data.modelEmotion)
       const isCorrect = typeof expressionCheck?.is_correct === 'boolean'
         ? expressionCheck.is_correct
-        : detectedEmotion.uiId === data.emotion
+        : detectedEmotion.uiId === targetMapInfo.uiId
+
+      // Gọi API ghi log cảm xúc của backend (port 5050)
+      await trackingApi.recordEmotionLog(selectedChild.id, {
+        trigger_source: 'WEBCAM',
+        ai_result: {
+          emotion: prediction.emotion,
+          confidence: confidence,
+          all_scores: prediction.all_scores || {}
+        },
+        metadata: {
+          source: 'child-games-imitation',
+          ui_label: detectedEmotion.label,
+          target_emotion: data.modelEmotion,
+          is_correct: isCorrect
+        }
+      })
 
       setScanStatus(isCorrect ? 'Nhận diện đúng!' : `Model thấy ${detectedEmotion.label}`)
       onAnswer(isCorrect, data.emotion, {
@@ -941,54 +973,83 @@ function ExpressionGame({
   }
 
   return (
-    <div className="expression-game-shell">
+    <div className="game-play-shell game1-shell">
       {feedbackOverlay}
 
-      <div className="expression-game-progress" aria-label={`Tiến độ ${currentIndex + 1}/${total}`}>
-        <div style={{ width: `${((currentIndex + 1) / total) * 100}%` }}></div>
+      <div className="game-screen-topbar">
+        <button type="button" className="game-screen-back" onClick={backToMenu}>
+          <FiArrowLeft className="games-back-icon" aria-hidden="true" />
+          <span>Quay lại</span>
+        </button>
+        <span className="games-menu-header-spacer" aria-hidden="true"></span>
       </div>
 
-      <div className="expression-game-stage">
-        <div className="expression-game-prompt-card">
-          <div className="expression-game-emoji">{data.emoji}</div>
-          <strong>{data.label}</strong>
+      <div className="choose-emotion-content flex-column-between" style={{ gap: '16px' }}>
+        <div className="game1-header">
+          <h1 className="game1-title">Hãy thể hiện cảm xúc: <span>{data.label}</span> {data.emoji}</h1>
+          <p className="game1-description">{data.instruction || 'Con hãy thể hiện biểu cảm trước camera và nhấn nút kiểm tra nhé!'}</p>
         </div>
-        <div className="expression-game-arrow" aria-hidden="true">↓</div>
 
-        <div className="expression-game-camera-wrap">
-          <div className="expression-game-status">{isScanning ? 'Đang nhận diện...' : scanStatus}</div>
-          <div className="expression-game-camera">
-            <video
-              ref={videoRef}
-              className={isCameraOn ? 'expression-game-video' : 'expression-game-video hidden'}
-              autoPlay
-              playsInline
-              muted
-            />
-            {isCameraOn && <div className="expression-game-face-guide" aria-hidden="true"></div>}
-            {!isCameraOn && (
-              <div className="expression-game-avatar" aria-hidden="true">
-                <div className="expression-game-avatar-face">
-                  <span className="avatar-eye left"></span>
-                  <span className="avatar-eye right"></span>
-                  <span className="avatar-mouth"></span>
-                </div>
-              </div>
-            )}
+        <div className="expression-game-camera-container" style={{ display: 'flex', gap: '20px', justifyContent: 'center', alignItems: 'center', flex: 1, width: '100%' }}>
+          
+          {/* Target Card */}
+          <div className="expression-game-prompt-card" style={{ flex: 1, maxWidth: '280px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', borderRadius: '24px', background: '#f8fafc', border: '2px dashed #cbd5e1' }}>
+            <div className="expression-game-emoji" style={{ fontSize: '72px', marginBottom: '10px' }}>{data.emoji}</div>
+            <strong style={{ fontSize: '20px', color: '#1e293b' }}>{data.label}</strong>
           </div>
+
+          {/* Camera Frame */}
+          <div className="expression-game-camera-wrap" style={{ flex: 1, maxWidth: '340px', position: 'relative', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+            <div className="expression-game-status" style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.6)', color: 'white', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', zIndex: 5 }}>
+              {isScanning ? 'Đang nhận diện...' : scanStatus}
+            </div>
+            <div className="expression-game-camera" style={{ width: '100%', height: '240px', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <video
+                ref={videoRef}
+                className={isCameraOn ? 'expression-game-video' : 'expression-game-video hidden'}
+                autoPlay
+                playsInline
+                muted
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              {isCameraOn && <div className="expression-game-face-guide" aria-hidden="true" style={{ position: 'absolute', inset: '20px', border: '2px dashed rgba(255,255,255,0.5)', borderRadius: '50%' }}></div>}
+              {!isCameraOn && (
+                <div className="expression-game-avatar" aria-hidden="true" style={{ color: '#cbd5e1', textAlign: 'center' }}>
+                  <FiCamera style={{ fontSize: '48px', marginBottom: '8px' }} />
+                  <p style={{ margin: 0, fontSize: '13px' }}>Camera đang tắt</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {cameraError && <p className="expression-game-error" style={{ color: '#ef4444', fontSize: '13px', margin: 0, textAlign: 'center' }}>{cameraError}</p>}
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: '100%' }}>
+          <button 
+            className="expression-game-check" 
+            onClick={scanExpression} 
+            disabled={isScanning || submittingAnswer}
+            style={{ 
+              minWidth: '220px', 
+              minHeight: '48px', 
+              borderRadius: '24px', 
+              border: 'none', 
+              background: '#2f63b7', 
+              color: 'white', 
+              fontWeight: '900', 
+              fontSize: '16px', 
+              cursor: 'pointer',
+              boxShadow: '0 8px 16px rgba(47, 99, 183, 0.2)'
+            }}
+          >
+            {isScanning ? 'Đang kiểm tra...' : isCameraOn ? 'Kiểm tra biểu cảm' : 'Bật camera'}
+          </button>
+
+          <GameStepProgress currentIndex={gameIndex} total={total} />
         </div>
       </div>
-
-      <div className="expression-game-copy">
-        <h2>Làm theo biểu cảm này nhé!</h2>
-        <p>{data.instruction || data.description}</p>
-      </div>
-
-      {cameraError && <p className="expression-game-error">{cameraError}</p>}
-
-      <button className="expression-game-check" onClick={scanExpression} disabled={isScanning}>
-        {isScanning ? 'Đang kiểm tra...' : isCameraOn ? 'Kiểm tra biểu cảm' : 'Bật camera'}
-      </button>
     </div>
   )
 }
