@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FiArrowLeft } from 'react-icons/fi'
-import { chatbotApi, getSelectedChild, preferencesApi, trackingApi } from '../services/api'
+import { chatbotApi, getSelectedChild, preferencesApi, trackingApi, childrenApi } from '../services/api'
 import '../styles/ChildChat.css'
 
 import bunnyAvatar from '../assets/bunny-avatar.png'
@@ -55,19 +55,27 @@ function buildChildProfile(child) {
   const birthYear = Number(child.birth_year)
   const age = Number.isInteger(birthYear) && birthYear > 1900 ? currentYear - birthYear : undefined
 
+  // Extract extra profile info from preferences if available
+  const prefs = child.preferences?.preferences || {}
+  
   return {
     name: child.nickname || child.name || 'Bé',
     age,
+    interests: Array.isArray(prefs.interests) ? prefs.interests : [],
+    communication_level: prefs.communication_level || 'cơ bản',
   }
 }
 
 export default function ChildChat() {
   const navigate = useNavigate()
   const selectedChild = getSelectedChild()
-  const childName = selectedChild?.nickname || selectedChild?.name || 'em'
+  const [childInfo, setChildInfo] = useState(selectedChild)
+  const childName = childInfo?.nickname || childInfo?.name || 'em'
+  
   const [regulationConfig, setRegulationConfig] = useState(() => {
     return normalizeRegulationConfig(selectedChild?.preferences?.preferences?.regulation)
   })
+  
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -101,17 +109,28 @@ export default function ChildChat() {
     regulationConfigRef.current = regulationConfig
   }, [regulationConfig])
 
+  // Tải thông tin đầy đủ của bé khi vào chat
   useEffect(() => {
     if (!selectedChild?.id) return undefined
 
     let mounted = true
-    preferencesApi.get(selectedChild.id)
+    childrenApi.detail(selectedChild.id)
       .then((result) => {
-        if (!mounted) return
-        setRegulationConfig(normalizeRegulationConfig(result.preferences?.preferences?.regulation))
+        if (!mounted || !result.child) return
+        setChildInfo(result.child)
+        // Cập nhật lại lời chào nếu tên thay đổi
+        const newName = result.child.nickname || result.child.name || 'em'
+        setMessages(prev => prev.map(m => 
+          m.id === 1 ? { ...m, text: `Xin chào ${newName}! 😊 Mình là Thỏ. Hôm nay ${newName} muốn nói chuyện với Thỏ về điều gì?` } : m
+        ))
+        
+        // Cập nhật cấu hình điều hòa cảm xúc
+        if (result.child.preferences?.preferences?.regulation) {
+          setRegulationConfig(normalizeRegulationConfig(result.child.preferences.preferences.regulation))
+        }
       })
       .catch(() => {
-        // Keep the default one-minute threshold if preferences cannot be loaded.
+        // Fallback to basic selectedChild if detail fails
       })
 
     return () => {
