@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import ToastNotification from '../components/ToastNotification'
+import ConfirmationModal from '../components/ConfirmationModal'
 import {
   authApi,
   childrenApi,
@@ -33,6 +34,22 @@ export default function ParentSettings() {
   const [formData, setFormData] = useState(defaultParentInfo)
   const [toast, setToast] = useState(null)
   const [loading, setLoading] = useState(false)
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  })
+
+  const triggerDeleteConfirmation = (child) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xoá tài khoản trẻ',
+      message: `Bạn có chắc chắn muốn xoá tài khoản của bé "${child.name}"? Hành động này sẽ xoá tất cả dữ liệu học tập và thú cưng của bé.`,
+      onConfirm: () => handleDeleteChild(child.id),
+    })
+  }
 
   const [passwordData, setPasswordData] = useState({
     oldPassword: '',
@@ -489,13 +506,21 @@ export default function ParentSettings() {
                 </div>
               </div>
 
-              <button className="delete-child-btn" onClick={() => handleDeleteChild(child.id)} aria-label={`Xoá ${child.name}`}>
+              <button className="delete-child-btn" onClick={() => triggerDeleteConfirmation(child)} aria-label={`Xoá ${child.name}`}>
                 Xoá
               </button>
             </div>
           ))}
         </div>
       </section>
+
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import ToastNotification from '../components/ToastNotification'
+import ConfirmationModal from '../components/ConfirmationModal'
 import { childrenApi, getSelectedChild, petsApi, setSelectedChild } from '../services/api'
 import '../styles/ParentShop.css'
 
@@ -25,6 +26,23 @@ export default function ParentShop() {
   const [toast, setToast] = useState(null)
   const [loading, setLoading] = useState(true)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  })
+
+  const triggerBuyConfirmation = (item) => {
+    const childName = children.find((c) => c.id === childId)?.nickname || 'bé'
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xác nhận mua',
+      message: `Bạn có chắc chắn muốn dùng ${item.price} sao để mua "${item.name}" cho bé ${childName}?`,
+      onConfirm: () => handleBuyItem(item),
+    })
+  }
 
   useEffect(() => {
     if (!dropdownOpen) return undefined
@@ -265,7 +283,7 @@ export default function ParentShop() {
                   <span className="price-star" aria-hidden="true">★</span>
                   <span>{item.price}</span>
                 </div>
-                <button className="buy-product-btn" onClick={() => handleBuyItem(item)} disabled={owned || userStars < item.price}>
+                <button className="buy-product-btn" onClick={() => triggerBuyConfirmation(item)} disabled={owned || userStars < item.price}>
                   {owned ? 'Đã có' : 'Mua'}
                 </button>
               </div>
@@ -273,6 +291,15 @@ export default function ParentShop() {
           )
         })}
       </div>
+
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        confirmText="Mua ngay"
+      />
     </div>
   )
 }

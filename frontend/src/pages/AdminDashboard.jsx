@@ -14,6 +14,7 @@ import {
   FiX,
 } from 'react-icons/fi'
 import { adminApi, authApi, clearSession, getSession, resolveMediaUrl } from '../services/api'
+import ConfirmationModal from '../components/ConfirmationModal'
 import '../styles/Admin.css'
 
 const emptyContentForm = {
@@ -434,6 +435,22 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false)
   const [mediaUploading, setMediaUploading] = useState(false)
   const [petMediaUploading, setPetMediaUploading] = useState(false)
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  })
+
+  const triggerDeleteConfirmation = ({ title, message, onConfirm }) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+    })
+  }
 
   const userName = session?.user?.full_name || session?.user?.email || 'Quản trị viên'
   const tabs = [
@@ -1496,7 +1513,16 @@ export default function AdminDashboard() {
                           <FiEdit2 aria-hidden="true" />
                           Sửa
                         </button>
-                        <button className="danger" onClick={() => handleDeleteContent(content.id)}>
+                        <button
+                          className="danger"
+                          onClick={() =>
+                            triggerDeleteConfirmation({
+                              title: 'Xóa nội dung',
+                              message: `Bạn có chắc chắn muốn xóa nội dung "${content.title}"?`,
+                              onConfirm: () => handleDeleteContent(content.id),
+                            })
+                          }
+                        >
                           <FiTrash2 aria-hidden="true" />
                           Xóa
                         </button>
@@ -1601,7 +1627,16 @@ export default function AdminDashboard() {
                         <FiEdit2 aria-hidden="true" />
                         Sửa
                       </button>
-                      <button className="danger" onClick={() => handleDeletePet(pet.id)}>
+                      <button
+                        className="danger"
+                        onClick={() =>
+                          triggerDeleteConfirmation({
+                            title: 'Xóa pet',
+                            message: `Bạn có chắc chắn muốn xóa pet "${pet.name}"?`,
+                            onConfirm: () => handleDeletePet(pet.id),
+                          })
+                        }
+                      >
                         <FiTrash2 aria-hidden="true" />
                         Xóa
                       </button>
@@ -1637,7 +1672,20 @@ export default function AdminDashboard() {
                       <option value="ACTIVE">{userStatusLabels.ACTIVE}</option>
                       <option value="BANNED">{userStatusLabels.BANNED}</option>
                     </select>
-                    <button className="danger" onClick={() => adminApi.deleteUser(user.id, 'Xóa từ trang quản trị').then(loadAdminData).catch((err) => setError(err.message))}>
+                    <button
+                      className="danger"
+                      onClick={() =>
+                        triggerDeleteConfirmation({
+                          title: 'Xóa người dùng',
+                          message: `Bạn có chắc chắn muốn xóa người dùng "${user.full_name || user.email}"?`,
+                          onConfirm: () =>
+                            adminApi
+                              .deleteUser(user.id, 'Xóa từ trang quản trị')
+                              .then(loadAdminData)
+                              .catch((err) => setError(err.message)),
+                        })
+                      }
+                    >
                       <FiTrash2 aria-hidden="true" />
                       Xóa
                     </button>
@@ -2059,6 +2107,14 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
     </div>
   )
 }
