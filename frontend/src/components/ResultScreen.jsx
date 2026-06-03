@@ -81,13 +81,6 @@ function ResultDialog({
 
         <h2 className="result-title">{title}</h2>
 
-        {!isIncorrect && (
-          <div className={`result-reward result-reward-${variant}`}>
-            <span className="result-reward-icon" aria-hidden="true">★</span>
-            <span>{displayReward}</span>
-          </div>
-        )}
-
         {detailLines.length > 0 && (
           <div className="result-details">
             {detailLines.map((line, index) => (
@@ -96,10 +89,19 @@ function ResultDialog({
           </div>
         )}
 
-        <button className="result-continue-btn" onClick={onContinue}>
-          <span>{cleanContinueLabel(continueLabel)}</span>
-          <span aria-hidden="true">→</span>
-        </button>
+        <div className="result-actions-group">
+          {!isIncorrect && (
+            <div className={`result-reward result-reward-${variant}`}>
+              <span className="result-reward-icon" aria-hidden="true">★</span>
+              <span>{displayReward}</span>
+            </div>
+          )}
+
+          <button className="result-continue-btn" onClick={onContinue}>
+            <span>{cleanContinueLabel(continueLabel)}</span>
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -85,6 +85,8 @@ export async function updateStorePet(
 }
 
 export async function softDeleteStorePet(db: DbExecutor, petId: string) {
+  await db.delete(childPets).where(eq(childPets.petId, petId));
+
   const [pet] = await db
     .update(pets)
     .set({ status: "HIDDEN", deletedAt: sql`NOW()`, updatedAt: sql`NOW()` })

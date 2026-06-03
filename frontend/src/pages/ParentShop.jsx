@@ -4,17 +4,6 @@ import ConfirmationModal from '../components/ConfirmationModal'
 import { childrenApi, getSelectedChild, petsApi, setSelectedChild } from '../services/api'
 import '../styles/ParentShop.css'
 
-const fallbackItems = [
-  {
-    id: 'fallback-1',
-    name: 'Thỏ bình tĩnh',
-    description: 'Một người bạn nhỏ để bé đồng hành trong góc bình tĩnh.',
-    category: 'pet-item',
-    price: 300,
-    image: '🐰',
-    bgColor: '#ffe5ef',
-  },
-]
 
 export default function ParentShop() {
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -81,15 +70,15 @@ export default function ParentShop() {
         setChildId(firstChild?.id || '')
         setUserStars(firstChild?.total_stars || 0)
         setSelectedChild(firstChild || null)
-        setShopItems(items.length ? items : fallbackItems)
+        setShopItems(items)
       })
       .catch((err) => {
         if (!mounted) return
-        setShopItems(fallbackItems)
+        setShopItems([])
         setToast({
           type: 'error',
           title: 'Không tải được cửa hàng',
-          message: err.message || 'Đang hiển thị dữ liệu mẫu.',
+          message: err.message || 'Lỗi tải dữ liệu.',
         })
       })
       .finally(() => {
